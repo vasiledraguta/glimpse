@@ -151,7 +151,6 @@ export const NEGATIVE_KEYWORDS = [
 	'just released',
 	"we've just launched",
 	'launching today',
-	'show hn:', // These are launches, not pain points
 ];
 
 export const PAIN_POINT_KEYWORDS = [

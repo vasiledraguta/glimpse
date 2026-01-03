@@ -83,7 +83,7 @@ async function fetchPosts(
 					node {
 						id name tagline description url votesCount createdAt
 						user { name username }
-						comments(first: 10) {
+						comments(first: ${RATE_LIMITS.productHunt.maxCommentsPerPost}) {
 							edges { node { id body createdAt user { name username } } }
 						}
 					}

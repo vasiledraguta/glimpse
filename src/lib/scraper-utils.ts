@@ -73,6 +73,7 @@ export function passesQualityFilter(
 		return score >= SCRAPE_CONFIG.tier2MinScore;
 	}
 
+	// Tier 3 (frustration) and Tier 4 (feature requests) use the default min score
 	return score >= minScore;
 }
 
