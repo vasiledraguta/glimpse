@@ -1,5 +1,4 @@
 import { Link } from '@tanstack/react-router';
-import { IconBrain } from '@tabler/icons-react';
 
 const NAV_LINKS = [
 	{ to: '/', label: 'Dashboard' },
@@ -12,7 +11,6 @@ const Header = () => {
 		<header className='border-b'>
 			<div className='mx-auto flex max-w-6xl items-center justify-between px-4 py-4'>
 				<div className='flex items-center gap-2'>
-					<IconBrain className='size-6 text-primary' />
 					<h1 className='text-xl font-bold'>Glimpse</h1>
 				</div>
 				<nav className='flex items-center gap-4'>

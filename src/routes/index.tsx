@@ -76,7 +76,11 @@ function Dashboard() {
 						<div className='flex items-center justify-between'>
 							<span className='text-2xl font-bold'>{enabledSourcesCount}</span>
 							<Link to='/sources'>
-								<Button variant='ghost' size='icon-sm'>
+								<Button
+									variant='ghost'
+									size='icon-sm'
+									className='cursor-pointer'
+								>
 									<IconSettings className='size-4' />
 								</Button>
 							</Link>
@@ -96,6 +100,7 @@ function Dashboard() {
 							<Button
 								variant='outline'
 								size='sm'
+								className='cursor-pointer'
 								onClick={() => processMutation.mutate()}
 								disabled={processMutation.isPending || unprocessedCount === 0}
 							>
@@ -120,7 +125,7 @@ function Dashboard() {
 						<div className='flex items-center justify-between'>
 							<span className='text-2xl font-bold'>{insights.length}+</span>
 							<Link to='/insights'>
-								<Button variant='ghost' size='sm'>
+								<Button variant='ghost' size='sm' className='cursor-pointer'>
 									View All
 								</Button>
 							</Link>
@@ -134,6 +139,7 @@ function Dashboard() {
 				<Button
 					onClick={() => scrapeMutation.mutate()}
 					disabled={scrapeMutation.isPending || enabledSourcesCount === 0}
+					className='cursor-pointer'
 				>
 					{scrapeMutation.isPending ? (
 						<IconLoader2
