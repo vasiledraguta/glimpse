@@ -1,5 +1,6 @@
 import Parser from 'rss-parser';
-import { PAIN_POINT_KEYWORDS, RATE_LIMITS } from '../constants';
+import { RATE_LIMITS } from '../constants';
+import { getKeywordTier, passesQualityFilter, sleep } from '../scraper-utils';
 import type { NewScrapeResult } from '@/db';
 
 const parser = new Parser();
@@ -28,17 +29,6 @@ interface RedditComment {
 			children?: Array<{ data: RedditComment }>;
 		};
 	};
-}
-
-function sleep(ms: number): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function matchesPainPointKeywords(text: string): boolean {
-	const lowerText = text.toLowerCase();
-	return PAIN_POINT_KEYWORDS.some((keyword) =>
-		lowerText.includes(keyword.toLowerCase()),
-	);
 }
 
 async function fetchPostsViaRss(subreddit: string): Promise<Array<RedditPost>> {
@@ -77,11 +67,7 @@ async function fetchPostWithComments(
 	try {
 		const response = await fetch(
 			`https://www.reddit.com/r/${subreddit}/comments/${postId}.json?limit=${RATE_LIMITS.reddit.maxCommentsPerPost}&sort=top`,
-			{
-				headers: {
-					'User-Agent': 'Glimpse/1.0.0 (personal research tool)',
-				},
-			},
+			{ headers: { 'User-Agent': 'Glimpse/1.0.0 (personal research tool)' } },
 		);
 
 		if (!response.ok) {
@@ -90,15 +76,12 @@ async function fetchPostWithComments(
 		}
 
 		const data = await response.json();
-
 		const postData = data[0]?.data?.children?.[0]?.data as
 			| RedditPost
 			| undefined;
 		const commentsData = data[1]?.data?.children || [];
 
-		if (!postData) {
-			return null;
-		}
+		if (!postData) return null;
 
 		const comments: Array<RedditComment> = [];
 
@@ -107,11 +90,9 @@ async function fetchPostWithComments(
 			depth = 0,
 		) {
 			if (depth > 3) return;
-
 			for (const child of children) {
 				if (!child.kind || child.kind === 't1') {
 					comments.push(child.data);
-
 					if (child.data.replies?.data?.children) {
 						extractComments(child.data.replies.data.children, depth + 1);
 					}
@@ -137,47 +118,54 @@ export async function scrapeSubreddit(
 ): Promise<Array<NewScrapeResult>> {
 	const results: Array<NewScrapeResult> = [];
 
-	console.log(`Fetching posts from r/${subreddit} via RSS...`);
+	console.log(`[reddit] Fetching posts from r/${subreddit}...`);
 	const posts = await fetchPostsViaRss(subreddit);
-	console.log(`Found ${posts.length} posts`);
+	console.log(`[reddit] Found ${posts.length} posts`);
 
-	const interestingPosts = posts.filter((post) => {
+	const potentiallyInteresting = posts.filter((post) => {
 		const text = `${post.title} ${post.selftext}`;
-		return matchesPainPointKeywords(text);
+		return getKeywordTier(text) !== null;
 	});
-	console.log(`${interestingPosts.length} posts match pain point keywords`);
 
-	for (const post of interestingPosts) {
-		console.log(
-			`Fetching comments for post: ${post.title.substring(0, 50)}...`,
-		);
+	console.log(`[reddit] ${potentiallyInteresting.length} posts match keywords`);
 
+	for (const post of potentiallyInteresting) {
 		await sleep(RATE_LIMITS.reddit.delayMs);
-
 		const fullPost = await fetchPostWithComments(subreddit, post.id);
+		if (!fullPost) continue;
 
-		if (!fullPost) {
-			continue;
+		const postText = `${fullPost.post.title} ${fullPost.post.selftext}`;
+		const postTierInfo = getKeywordTier(postText);
+
+		if (
+			postTierInfo &&
+			passesQualityFilter(postTierInfo.tier, fullPost.post.score)
+		) {
+			results.push({
+				sourceId,
+				externalId: fullPost.post.id,
+				type: 'post',
+				title: fullPost.post.title,
+				content: fullPost.post.selftext,
+				author: fullPost.post.author,
+				url: `https://www.reddit.com${fullPost.post.permalink}`,
+				score: fullPost.post.score,
+				metadata: {
+					subreddit,
+					numComments: fullPost.post.num_comments,
+					keywordTier: postTierInfo.tier,
+					keywordCategory: postTierInfo.category,
+				},
+				contentCreatedAt: new Date(fullPost.post.created_utc * 1000),
+			});
 		}
 
-		results.push({
-			sourceId,
-			externalId: fullPost.post.id,
-			type: 'post',
-			title: fullPost.post.title,
-			content: fullPost.post.selftext,
-			author: fullPost.post.author,
-			url: `https://www.reddit.com${fullPost.post.permalink}`,
-			score: fullPost.post.score,
-			metadata: {
-				subreddit,
-				numComments: fullPost.post.num_comments,
-			},
-			contentCreatedAt: new Date(fullPost.post.created_utc * 1000),
-		});
-
 		for (const comment of fullPost.comments) {
-			if (matchesPainPointKeywords(comment.body)) {
+			const commentTierInfo = getKeywordTier(comment.body);
+			if (
+				commentTierInfo &&
+				passesQualityFilter(commentTierInfo.tier, comment.score, true)
+			) {
 				results.push({
 					sourceId,
 					externalId: comment.id,
@@ -191,6 +179,8 @@ export async function scrapeSubreddit(
 					metadata: {
 						subreddit,
 						postTitle: fullPost.post.title,
+						keywordTier: commentTierInfo.tier,
+						keywordCategory: commentTierInfo.category,
 					},
 					contentCreatedAt: new Date(comment.created_utc * 1000),
 				});
@@ -198,6 +188,6 @@ export async function scrapeSubreddit(
 		}
 	}
 
-	console.log(`Scraped ${results.length} items from r/${subreddit}`);
+	console.log(`[reddit] Scraped ${results.length} items from r/${subreddit}`);
 	return results;
 }

@@ -99,6 +99,14 @@ export const scrapeResults = pgTable(
 	],
 );
 
+export const opportunityTypeEnum = pgEnum('opportunity_type', [
+	'gap',
+	'improvement',
+	'workflow',
+	'pricing',
+	'integration',
+]);
+
 export const insights = pgTable('insights', {
 	id: uuid('id').primaryKey().defaultRandom(),
 	scrapeResultId: uuid('scrape_result_id')
@@ -106,8 +114,12 @@ export const insights = pgTable('insights', {
 		.notNull()
 		.unique(),
 	category: insightCategoryEnum('category').notNull(),
+	opportunityType: opportunityTypeEnum('opportunity_type'),
 	summary: text('summary').notNull(),
 	productIdea: text('product_idea'),
+	targetCustomer: text('target_customer'),
+	competitorsMentioned: text('competitors_mentioned').array(),
+	marketSignal: real('market_signal'),
 	confidence: real('confidence').notNull(),
 	tags: text('tags').array(),
 	processedAt: timestamp('processed_at', { withTimezone: true })

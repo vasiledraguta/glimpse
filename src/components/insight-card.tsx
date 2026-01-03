@@ -48,23 +48,25 @@ const InsightCard = ({ insight, scrapeResult, source }: InsightCardProps) => {
 				</div>
 			</CardHeader>
 			<CardContent className='space-y-3'>
-				{/* Original Title */}
-				{scrapeResult.title && (
-					<div className='flex items-start justify-between gap-2'>
+				{/* Original Title & Source Link */}
+				<div className='flex items-start justify-between gap-2'>
+					{scrapeResult.title ? (
 						<p className='text-sm font-medium'>{scrapeResult.title}</p>
-						{scrapeResult.url && (
-							<a
-								href={scrapeResult.url}
-								target='_blank'
-								rel='noopener noreferrer'
-								className='flex shrink-0 items-center gap-1 text-xs text-muted-foreground hover:text-foreground'
-							>
-								<IconExternalLink className='size-3' />
-								Source
-							</a>
-						)}
-					</div>
-				)}
+					) : (
+						<div className='flex-1' />
+					)}
+					{scrapeResult.url && (
+						<a
+							href={scrapeResult.url}
+							target='_blank'
+							rel='noopener noreferrer'
+							className='flex shrink-0 items-center gap-1 text-xs text-muted-foreground hover:text-foreground'
+						>
+							<IconExternalLink className='size-3' />
+							Source
+						</a>
+					)}
+				</div>
 
 				{/* Summary */}
 				<p className='text-sm text-muted-foreground'>{insight.summary}</p>

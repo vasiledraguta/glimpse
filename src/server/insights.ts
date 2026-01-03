@@ -1,9 +1,13 @@
 import { createServerFn } from '@tanstack/react-start';
-import { and, desc, eq, gte, inArray, isNotNull, isNull } from 'drizzle-orm';
+import { desc, eq, inArray, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, insights, processingBatches, scrapeResults, sources } from '@/db';
 import { extractInsights } from '@/lib/ai';
 import { AI_CONFIG } from '@/lib/constants';
+import {
+	deleteLowQualityItems,
+	preFilterScrapeResults,
+} from '@/lib/pre-filter';
 
 export const getInsights = createServerFn({ method: 'GET' })
 	.inputValidator(
@@ -33,8 +37,6 @@ export const getInsights = createServerFn({ method: 'GET' })
 	.handler(async ({ data }) => {
 		const conditions = [];
 
-		conditions.push(gte(insights.confidence, data.minConfidence));
-
 		if (data.category) {
 			conditions.push(eq(insights.category, data.category));
 		}
@@ -48,7 +50,6 @@ export const getInsights = createServerFn({ method: 'GET' })
 			.from(insights)
 			.innerJoin(scrapeResults, eq(insights.scrapeResultId, scrapeResults.id))
 			.innerJoin(sources, eq(scrapeResults.sourceId, sources.id))
-			.where(and(...conditions))
 			.orderBy(desc(insights.createdAt))
 			.limit(data.limit)
 			.offset(data.offset);
@@ -78,29 +79,23 @@ export const getInsight = createServerFn({ method: 'GET' })
 
 export const processWithAI = createServerFn({ method: 'POST' }).handler(
 	async () => {
-		console.log('[ai] Starting AI processing...');
+		console.log('[ai] Starting AI processing with pre-filter...');
 
-		const unprocessed = await db
-			.select({
-				scrapeResult: scrapeResults,
-			})
-			.from(scrapeResults)
-			.leftJoin(insights, eq(scrapeResults.id, insights.scrapeResultId))
-			.where(and(isNotNull(scrapeResults.content), isNull(insights.id)))
-			.limit(AI_CONFIG.batchSize);
-
-		const unprocessedResults = unprocessed.map((r) => r.scrapeResult);
-
-		console.log(
-			`[ai] Found ${unprocessedResults.length} unprocessed items with content`,
+		const { toProcess, toDeleteIds } = await preFilterScrapeResults(
+			AI_CONFIG.batchSize,
 		);
 
-		if (unprocessedResults.length === 0) {
-			console.log('[ai] No unprocessed items found, exiting');
+		if (toDeleteIds.length > 0) {
+			const deleted = await deleteLowQualityItems(toDeleteIds);
+			console.log(`[ai] Deleted ${deleted} low-quality items from pre-filter`);
+		}
+
+		if (toProcess.length === 0) {
+			console.log('[ai] No items passed pre-filter');
 			return {
 				processed: 0,
-				deleted: 0,
-				message: 'No unprocessed items found',
+				deleted: toDeleteIds.length,
+				message: 'No quality items to process',
 			};
 		}
 
@@ -108,31 +103,21 @@ export const processWithAI = createServerFn({ method: 'POST' }).handler(
 			.insert(processingBatches)
 			.values({
 				status: 'processing',
-				totalItems: unprocessedResults.length,
+				totalItems: toProcess.length,
 				processedItems: 0,
 				startedAt: new Date(),
 			})
 			.returning();
 
-		console.log(`[ai] Created processing batch: ${batch.id}`);
+		console.log(`[ai] Created batch: ${batch.id}`);
 
 		try {
-			const sourceIds = [...new Set(unprocessedResults.map((r) => r.sourceId))];
-			const sourcesData = await db
-				.select()
-				.from(sources)
-				.where(inArray(sources.id, sourceIds));
-			const sourceMap = new Map(sourcesData.map((s) => [s.id, s]));
-
-			const itemsForAI = unprocessedResults.map((result) => {
-				const source = sourceMap.get(result.sourceId);
-				return {
-					externalId: result.id,
-					title: result.title,
-					content: result.content,
-					source: `${source?.type || 'unknown'}: ${source?.name || 'unknown'}`,
-				};
-			});
+			const itemsForAI = toProcess.map((result) => ({
+				externalId: result.scrapeResult.id,
+				title: result.scrapeResult.title,
+				content: result.scrapeResult.content,
+				source: result.scrapeResult.sourceType,
+			}));
 
 			console.log(`[ai] Sending ${itemsForAI.length} items to Gemini...`);
 
@@ -148,24 +133,25 @@ export const processWithAI = createServerFn({ method: 'POST' }).handler(
 			);
 
 			console.log(
-				`[ai] ${highConfidence.length} high-confidence insights (>= ${AI_CONFIG.minConfidence})`,
-			);
-			console.log(
-				`[ai] ${lowConfidence.length} low-confidence items to delete`,
+				`[ai] ${highConfidence.length} high-confidence, ${lowConfidence.length} low-confidence`,
 			);
 
 			if (highConfidence.length > 0) {
 				const newInsights = highConfidence.map((aiInsight) => ({
 					scrapeResultId: aiInsight.externalId,
 					category: aiInsight.category,
+					opportunityType: aiInsight.opportunityType,
 					summary: aiInsight.summary,
 					productIdea: aiInsight.productIdea,
+					targetCustomer: aiInsight.targetCustomer,
+					competitorsMentioned: aiInsight.competitorsMentioned,
+					marketSignal: aiInsight.marketSignal,
 					confidence: aiInsight.confidence,
 					tags: aiInsight.tags,
 				}));
 
 				await db.insert(insights).values(newInsights);
-				console.log(`[ai] Inserted ${newInsights.length} insights into DB`);
+				console.log(`[ai] Inserted ${newInsights.length} insights`);
 			}
 
 			if (lowConfidence.length > 0) {
@@ -174,7 +160,7 @@ export const processWithAI = createServerFn({ method: 'POST' }).handler(
 					.delete(scrapeResults)
 					.where(inArray(scrapeResults.id, idsToDelete));
 				console.log(
-					`[ai] Deleted ${lowConfidence.length} low-confidence scrape results`,
+					`[ai] Deleted ${lowConfidence.length} low-confidence AI results`,
 				);
 			}
 
@@ -187,12 +173,10 @@ export const processWithAI = createServerFn({ method: 'POST' }).handler(
 				})
 				.where(eq(processingBatches.id, batch.id));
 
-			console.log('[ai] Processing completed successfully');
-
 			return {
 				processed: highConfidence.length,
-				deleted: lowConfidence.length,
-				total: unprocessedResults.length,
+				deleted: toDeleteIds.length + lowConfidence.length,
+				total: toProcess.length,
 				batchId: batch.id,
 			};
 		} catch (error) {
@@ -200,10 +184,7 @@ export const processWithAI = createServerFn({ method: 'POST' }).handler(
 
 			await db
 				.update(processingBatches)
-				.set({
-					status: 'failed',
-					completedAt: new Date(),
-				})
+				.set({ status: 'failed', completedAt: new Date() })
 				.where(eq(processingBatches.id, batch.id));
 
 			throw error;
