@@ -11,6 +11,7 @@ import {
 	IconTrash,
 } from '@tabler/icons-react';
 import type { Source, SourceConfig } from '@/db';
+import type { SourceType } from '@/lib/ui-constants';
 import {
 	createSource,
 	deleteSource,
@@ -40,22 +41,9 @@ import {
 	AlertDialogTitle,
 	AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { SOURCE_TYPE_ICONS_LG, SOURCE_TYPE_LABELS } from '@/lib/ui-constants';
 
 export const Route = createFileRoute('/sources')({ component: SourcesPage });
-
-type SourceType = 'reddit' | 'hackernews' | 'producthunt';
-
-const SOURCE_TYPE_ICONS: Record<SourceType, React.ReactNode> = {
-	reddit: <IconBrandReddit className='size-5' />,
-	hackernews: <IconNews className='size-5' />,
-	producthunt: <IconRocket className='size-5' />,
-};
-
-const SOURCE_TYPE_LABELS: Record<SourceType, string> = {
-	reddit: 'Reddit',
-	hackernews: 'Hacker News',
-	producthunt: 'Product Hunt',
-};
 
 function SourcesPage() {
 	const queryClient = useQueryClient();
@@ -89,61 +77,59 @@ function SourcesPage() {
 	});
 
 	return (
-		<div className='min-h-screen bg-background'>
-			<div className='mx-auto max-w-4xl px-4 py-8'>
-				<div className='mb-8 flex items-center justify-between'>
-					<div>
-						<h1 className='text-2xl font-bold'>Sources</h1>
-						<p className='text-muted-foreground text-sm'>
-							Manage the data sources for scraping pain points
-						</p>
-					</div>
-					<Button onClick={() => setIsCreating(true)}>
-						<IconPlus data-icon='inline-start' className='size-4' />
-						Add Source
-					</Button>
+		<main className='mx-auto max-w-6xl px-4 py-8'>
+			<div className='mb-8 flex items-center justify-between'>
+				<div>
+					<h1 className='text-2xl font-bold'>Sources</h1>
+					<p className='text-sm text-muted-foreground'>
+						Manage the data sources for scraping pain points
+					</p>
 				</div>
-
-				{isCreating && (
-					<CreateSourceForm
-						onCancel={() => setIsCreating(false)}
-						onSubmit={(data) => createMutation.mutate(data)}
-						isSubmitting={createMutation.isPending}
-					/>
-				)}
-
-				{isLoading ? (
-					<div className='text-muted-foreground py-8 text-center'>
-						Loading sources...
-					</div>
-				) : sources.length === 0 ? (
-					<Card>
-						<CardContent className='py-8 text-center'>
-							<p className='text-muted-foreground'>
-								No sources configured yet. Add a source to start scraping.
-							</p>
-						</CardContent>
-					</Card>
-				) : (
-					<div className='space-y-4'>
-						{sources.map((source) => (
-							<SourceCard
-								key={source.id}
-								source={source}
-								onToggle={() => toggleMutation.mutate({ id: source.id })}
-								onDelete={() => deleteMutation.mutate({ id: source.id })}
-								isToggling={toggleMutation.isPending}
-								isDeleting={deleteMutation.isPending}
-							/>
-						))}
-					</div>
-				)}
+				<Button onClick={() => setIsCreating(true)}>
+					<IconPlus data-icon='inline-start' className='size-4' />
+					Add Source
+				</Button>
 			</div>
-		</div>
+
+			{isCreating && (
+				<CreateSourceForm
+					onCancel={() => setIsCreating(false)}
+					onSubmit={(data) => createMutation.mutate(data)}
+					isSubmitting={createMutation.isPending}
+				/>
+			)}
+
+			{isLoading ? (
+				<div className='py-8 text-center text-muted-foreground'>
+					Loading sources...
+				</div>
+			) : sources.length === 0 ? (
+				<Card>
+					<CardContent className='py-8 text-center'>
+						<p className='text-muted-foreground'>
+							No sources configured yet. Add a source to start scraping.
+						</p>
+					</CardContent>
+				</Card>
+			) : (
+				<div className='space-y-4'>
+					{sources.map((source) => (
+						<SourceCard
+							key={source.id}
+							source={source}
+							onToggle={() => toggleMutation.mutate({ id: source.id })}
+							onDelete={() => deleteMutation.mutate({ id: source.id })}
+							isToggling={toggleMutation.isPending}
+							isDeleting={deleteMutation.isPending}
+						/>
+					))}
+				</div>
+			)}
+		</main>
 	);
 }
 
-function SourceCard({
+const SourceCard = ({
 	source,
 	onToggle,
 	onDelete,
@@ -155,7 +141,7 @@ function SourceCard({
 	onDelete: () => void;
 	isToggling: boolean;
 	isDeleting: boolean;
-}) {
+}) => {
 	const config = source.config;
 	const configDisplay = getConfigDisplay(source.type, config);
 
@@ -164,11 +150,11 @@ function SourceCard({
 			<CardHeader className='flex-row items-center justify-between'>
 				<div className='flex items-center gap-3'>
 					<div className='text-muted-foreground'>
-						{SOURCE_TYPE_ICONS[source.type as SourceType]}
+						{SOURCE_TYPE_ICONS_LG[source.type as SourceType]}
 					</div>
 					<div>
 						<CardTitle className='text-base'>{source.name}</CardTitle>
-						<p className='text-muted-foreground text-sm'>
+						<p className='text-sm text-muted-foreground'>
 							{SOURCE_TYPE_LABELS[source.type as SourceType]}
 						</p>
 					</div>
@@ -181,7 +167,7 @@ function SourceCard({
 			</CardHeader>
 			<CardContent>
 				<div className='flex items-center justify-between'>
-					<div className='text-muted-foreground text-sm'>{configDisplay}</div>
+					<div className='text-sm text-muted-foreground'>{configDisplay}</div>
 					<div className='flex items-center gap-2'>
 						<Button
 							variant='ghost'
@@ -225,16 +211,16 @@ function SourceCard({
 					</div>
 				</div>
 				{source.lastScrapedAt && (
-					<p className='text-muted-foreground mt-2 text-xs'>
+					<p className='mt-2 text-xs text-muted-foreground'>
 						Last scraped: {new Date(source.lastScrapedAt).toLocaleString()}
 					</p>
 				)}
 			</CardContent>
 		</Card>
 	);
-}
+};
 
-function getConfigDisplay(type: string, config: SourceConfig): string {
+const getConfigDisplay = (type: string, config: SourceConfig): string => {
 	switch (type) {
 		case 'reddit':
 			return `Subreddit: r/${(config as { subreddit: string }).subreddit}`;
@@ -263,7 +249,7 @@ function getConfigDisplay(type: string, config: SourceConfig): string {
 		default:
 			return JSON.stringify(config);
 	}
-}
+};
 
 type CreateSourceData = {
 	type: SourceType;
@@ -272,7 +258,7 @@ type CreateSourceData = {
 	enabled?: boolean;
 };
 
-function CreateSourceForm({
+const CreateSourceForm = ({
 	onCancel,
 	onSubmit,
 	isSubmitting,
@@ -280,7 +266,7 @@ function CreateSourceForm({
 	onCancel: () => void;
 	onSubmit: (data: CreateSourceData) => void;
 	isSubmitting: boolean;
-}) {
+}) => {
 	const [type, setType] = useState<SourceType | ''>('');
 	const [name, setName] = useState('');
 
@@ -446,4 +432,4 @@ function CreateSourceForm({
 			</CardContent>
 		</Card>
 	);
-}
+};
