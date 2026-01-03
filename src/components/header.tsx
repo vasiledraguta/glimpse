@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router';
+import ModeToggle from '@/components/mode-toggle';
 
 const NAV_LINKS = [
 	{ to: '/', label: 'Dashboard' },
@@ -29,6 +30,7 @@ const Header = () => {
 							{link.label}
 						</Link>
 					))}
+					<ModeToggle />
 				</nav>
 			</div>
 		</header>

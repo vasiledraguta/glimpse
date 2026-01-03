@@ -10,6 +10,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import appCss from '../styles.css?url';
 import type { QueryClient } from '@tanstack/react-query';
 import Header from '@/components/header';
+import { ThemeProvider } from '@/components/theme-provider';
 
 export interface RouterContext {
 	queryClient: QueryClient;
@@ -51,15 +52,33 @@ function RootComponent() {
 	);
 }
 
+const themeScript = `
+(function() {
+  const storageKey = 'glimpse-theme';
+  const stored = localStorage.getItem(storageKey);
+  let theme = 'system';
+  if (stored === 'dark' || stored === 'light' || stored === 'system') {
+    theme = stored;
+  }
+  if (theme === 'system') {
+    theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  document.documentElement.classList.add(theme);
+})();
+`;
+
 function RootDocument({ children }: { children: React.ReactNode }) {
 	return (
-		<html lang='en'>
+		<html lang='en' suppressHydrationWarning>
 			<head>
+				<script dangerouslySetInnerHTML={{ __html: themeScript }} />
 				<HeadContent />
 			</head>
 			<body className='min-h-screen bg-background'>
-				<Header />
-				{children}
+				<ThemeProvider defaultTheme='system' storageKey='glimpse-theme'>
+					<Header />
+					{children}
+				</ThemeProvider>
 				<TanStackDevtools
 					config={{
 						position: 'bottom-right',
