@@ -140,8 +140,12 @@ export const processWithAI = createServerFn({ method: 'POST' }).handler(
 				const newInsights = highConfidence.map((aiInsight) => ({
 					scrapeResultId: aiInsight.externalId,
 					category: aiInsight.category,
+					opportunityType: aiInsight.opportunityType,
 					summary: aiInsight.summary,
 					productIdea: aiInsight.productIdea,
+					targetCustomer: aiInsight.targetCustomer,
+					competitorsMentioned: aiInsight.competitorsMentioned,
+					marketSignal: aiInsight.marketSignal,
 					confidence: aiInsight.confidence,
 					tags: aiInsight.tags,
 				}));
