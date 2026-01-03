@@ -1,92 +1,172 @@
+export const HIGH_INTENT_KEYWORDS = [
+	// Purchase intent
+	'would pay for',
+	'take my money',
+	'shut up and take my money',
+	"i'd pay",
+	'willing to pay',
+	'happy to pay',
+
+	// Building intent
+	'built this myself',
+	'building my own',
+	'anyone built',
+	'has anyone made',
+	'thinking of building',
+	'considering building',
+
+	// Switching intent
+	"i'd switch to",
+	'considering switching',
+	'looking to switch',
+	'ready to switch',
+	'evaluating alternatives',
+	'evaluating options',
+
+	// Active search
+	'does anyone know of',
+	'can anyone recommend',
+	'what do you all use',
+];
+
+export const PROBLEM_SEEKING_KEYWORDS = [
+	// Alternative seeking
+	'looking for alternative',
+	'looking for an alternative',
+	'better alternative to',
+	'alternative to',
+	'alternatives to',
+	'replacement for',
+	'instead of',
+
+	// Recommendation seeking
+	'recommendations for',
+	'recommend a',
+	'recommend an',
+	'suggest a',
+	'suggest an',
+	'suggestions for',
+	'what do you use for',
+	'what are you using for',
+	'best tool for',
+	'best app for',
+	'best software for',
+
+	// Solution seeking
+	'trying to solve',
+	'need a solution',
+	'looking for a way',
+	'how do you handle',
+	'how do you deal with',
+	'best way to',
+	'how to solve',
+	'need help with',
+	'struggling to find',
+];
+
+export const FRUSTRATION_KEYWORDS = [
+	// Direct frustration
+	'frustrated with',
+	'frustrating',
+	'hate how',
+	'hating',
+	'annoying',
+	'annoyed by',
+
+	// Quality issues
+	'broken',
+	'buggy',
+	'glitchy',
+	'unreliable',
+	"doesn't work",
+	"won't work",
+	'not working',
+	'keeps breaking',
+	'always crashes',
+
+	// Value issues
+	'too slow',
+	'too expensive',
+	'too complicated',
+	'overpriced',
+	'waste of money',
+	'waste of time',
+
+	// Strong negative sentiment
+	'terrible',
+	'awful',
+	'horrible',
+	'worst',
+	'useless',
+	'garbage',
+	'trash',
+	'sucks',
+];
+
+export const FEATURE_REQUEST_KEYWORDS = [
+	'should have',
+	'would be nice if',
+	'wish it had',
+	'wish there was',
+	'missing feature',
+	"why doesn't",
+	"why can't",
+	'feature request',
+	'needs to add',
+	'please add',
+	'hoping they add',
+	'would love if',
+	'really wish',
+];
+
+export const NEGATIVE_KEYWORDS = [
+	// Venting/ranting
+	'just venting',
+	'sorry for the rant',
+	'off my chest',
+	'rant over',
+	'end rant',
+	'/rant',
+
+	// Job/hiring posts
+	'hiring',
+	"we're hiring",
+	'job posting',
+	'job opening',
+	'looking to hire',
+	'apply here',
+
+	// Promotional content
+	'discount code',
+	'promo code',
+	'coupon',
+	'affiliate',
+	'sponsored',
+	'ad:',
+	'[ad]',
+
+	// Self-promotion
+	'check out my',
+	'i just launched',
+	'just released',
+	"we've just launched",
+	'launching today',
+	'show hn:', // These are launches, not pain points
+];
+
+export const PAIN_POINT_KEYWORDS = [
+	...HIGH_INTENT_KEYWORDS,
+	...PROBLEM_SEEKING_KEYWORDS,
+	...FRUSTRATION_KEYWORDS,
+	...FEATURE_REQUEST_KEYWORDS,
+];
+
 export const PAIN_POINT_KEYWORD_CATEGORIES: Record<string, Array<string>> = {
-	frustration: [
-		'frustrated',
-		'frustrating',
-		'hate',
-		'hating',
-		'annoying',
-		'annoyed',
-		'broken',
-		'sucks',
-		'terrible',
-		'awful',
-		'horrible',
-		'worst',
-		'useless',
-		'garbage',
-		'trash',
-	],
-
-	alternatives: [
-		'alternative to',
-		'alternatives to',
-		'better than',
-		'switching from',
-		'moved away from',
-		'replacement for',
-		'replace',
-		'instead of',
-		'competitor to',
-	],
-
-	needs: [
-		'looking for',
-		'searching for',
-		'need a',
-		'need an',
-		'need something',
-		'wish there was',
-		'wish I had',
-		'would pay for',
-		'anyone built',
-		'has anyone made',
-	],
-
-	questions: [
-		'anyone know',
-		'does anyone',
-		'help me find',
-		'recommendations for',
-		'recommend a',
-		'suggest a',
-		'what do you use for',
-		'how do you handle',
-		'best way to',
-		'how to solve',
-	],
-
-	problems: [
-		'problem with',
-		'issue with',
-		'struggling with',
-		"can't figure out",
-		"doesn't work",
-		"won't work",
-		'not working',
-		'keeps breaking',
-		'always crashes',
-		'too slow',
-		'too expensive',
-		'too complicated',
-	],
-
-	features: [
-		'should have',
-		'would be nice',
-		'missing feature',
-		"why doesn't",
-		"why can't",
-		'feature request',
-		'wish it had',
-		'needs to add',
-		'please add',
-		'hoping for',
-	],
+	highIntent: HIGH_INTENT_KEYWORDS,
+	problemSeeking: PROBLEM_SEEKING_KEYWORDS,
+	frustration: FRUSTRATION_KEYWORDS,
+	features: FEATURE_REQUEST_KEYWORDS,
 };
-
-export const PAIN_POINT_KEYWORDS = Object.values(
-	PAIN_POINT_KEYWORD_CATEGORIES,
-).flat();
 
 export const RATE_LIMITS = {
 	reddit: {
@@ -107,11 +187,15 @@ export const RATE_LIMITS = {
 
 export const SCRAPE_CONFIG = {
 	maxPostsFromRss: 25,
-	minPostScore: 5,
+	minPostScore: 10,
+	minCommentScore: 3,
 	maxPostAgeHours: 72,
+	tier1BypassScoreThreshold: true,
+	tier2MinScore: 5,
 };
 
 export const AI_CONFIG = {
 	batchSize: 20,
 	minConfidence: 0.5,
+	minMarketSignal: 0.6,
 };

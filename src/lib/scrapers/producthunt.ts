@@ -1,4 +1,5 @@
-import { PAIN_POINT_KEYWORDS, RATE_LIMITS } from '../constants';
+import { RATE_LIMITS } from '../constants';
+import { getKeywordTier, sleep } from '../scraper-utils';
 import type { NewScrapeResult } from '@/db';
 
 const PH_API_URL = 'https://api.producthunt.com/v2/api/graphql';
@@ -11,34 +12,31 @@ interface ProductHuntPost {
 	url: string;
 	votesCount: number;
 	createdAt: string;
-	user: {
-		name: string;
-		username: string;
-	};
+	user: { name: string; username: string };
 	comments: {
 		edges: Array<{
 			node: {
 				id: string;
 				body: string;
 				createdAt: string;
-				user: {
-					name: string;
-					username: string;
-				};
+				user: { name: string; username: string };
 			};
 		}>;
 	};
 }
 
-function sleep(ms: number): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve, ms));
+function isQuestion(text: string): boolean {
+	return text.includes('?') || text.toLowerCase().startsWith('does ');
 }
 
-function matchesPainPointKeywords(text: string): boolean {
-	const lowerText = text.toLowerCase();
-	return PAIN_POINT_KEYWORDS.some((keyword) =>
-		lowerText.includes(keyword.toLowerCase()),
-	);
+function calculateEngagementSignal(
+	votesCount: number,
+	commentsCount: number,
+): 'high' | 'medium' | 'low' {
+	const ratio = commentsCount / Math.max(votesCount, 1);
+	if (ratio > 0.5 || commentsCount > 10) return 'high';
+	if (ratio > 0.2 || commentsCount > 5) return 'medium';
+	return 'low';
 }
 
 async function getAccessToken(): Promise<string | null> {
@@ -46,16 +44,14 @@ async function getAccessToken(): Promise<string | null> {
 	const clientSecret = process.env.PRODUCTHUNT_API_SECRET;
 
 	if (!clientId || !clientSecret) {
-		console.error('Product Hunt API credentials not configured');
+		console.error('[PH] API credentials not configured');
 		return null;
 	}
 
 	try {
 		const response = await fetch('https://api.producthunt.com/v2/oauth/token', {
 			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-			},
+			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
 				client_id: clientId,
 				client_secret: clientSecret,
@@ -64,17 +60,14 @@ async function getAccessToken(): Promise<string | null> {
 		});
 
 		if (!response.ok) {
-			console.error(
-				'Failed to get Product Hunt access token:',
-				response.status,
-			);
+			console.error('[PH] Failed to get access token:', response.status);
 			return null;
 		}
 
 		const data = await response.json();
 		return data.access_token;
 	} catch (error) {
-		console.error('Error getting Product Hunt access token:', error);
+		console.error('[PH] Error getting access token:', error);
 		return null;
 	}
 }
@@ -88,29 +81,10 @@ async function fetchPosts(
 			posts(first: $first, order: NEWEST) {
 				edges {
 					node {
-						id
-						name
-						tagline
-						description
-						url
-						votesCount
-						createdAt
-						user {
-							name
-							username
-						}
-						comments(first: ${RATE_LIMITS.productHunt.maxCommentsPerPost}) {
-							edges {
-								node {
-									id
-									body
-									createdAt
-									user {
-										name
-										username
-									}
-								}
-							}
+						id name tagline description url votesCount createdAt
+						user { name username }
+						comments(first: 10) {
+							edges { node { id body createdAt user { name username } } }
 						}
 					}
 				}
@@ -125,40 +99,27 @@ async function fetchPosts(
 				'Content-Type': 'application/json',
 				Authorization: `Bearer ${accessToken}`,
 			},
-			body: JSON.stringify({
-				query,
-				variables: { first },
-			}),
+			body: JSON.stringify({ query, variables: { first } }),
 		});
 
 		if (!response.ok) {
-			console.error('Failed to fetch Product Hunt posts:', response.status);
+			console.error('[PH] Failed to fetch posts:', response.status);
 			return [];
 		}
 
 		const data = await response.json();
-
 		if (data.errors) {
-			console.error(
-				'Product Hunt GraphQL errors:',
-				JSON.stringify(data.errors, null, 2),
-			);
+			console.error('[PH] GraphQL errors:', JSON.stringify(data.errors));
 			return [];
 		}
 
-		if (!data.data?.posts?.edges) {
-			console.error(
-				'Unexpected Product Hunt response structure:',
-				JSON.stringify(data, null, 2),
-			);
-			return [];
-		}
-
-		return data.data.posts.edges.map(
-			(edge: { node: ProductHuntPost }) => edge.node,
+		return (
+			data.data?.posts?.edges?.map(
+				(edge: { node: ProductHuntPost }) => edge.node,
+			) || []
 		);
 	} catch (error) {
-		console.error('Error fetching Product Hunt posts:', error);
+		console.error('[PH] Error fetching posts:', error);
 		return [];
 	}
 }
@@ -168,27 +129,47 @@ export async function scrapeProductHunt(
 ): Promise<Array<NewScrapeResult>> {
 	const results: Array<NewScrapeResult> = [];
 
-	console.log('Getting Product Hunt access token...');
+	console.log('[PH] Getting access token...');
 	const accessToken = await getAccessToken();
+	if (!accessToken) return results;
 
-	if (!accessToken) {
-		console.error('Could not get Product Hunt access token');
-		return results;
-	}
-
-	console.log('Fetching posts from Product Hunt...');
+	console.log('[PH] Fetching posts...');
 	await sleep(RATE_LIMITS.productHunt.delayMs);
 	const posts = await fetchPosts(accessToken);
-	console.log(`Found ${posts.length} posts`);
+	console.log(`[PH] Found ${posts.length} posts`);
 
 	for (const post of posts) {
 		const postText = `${post.name} ${post.tagline} ${post.description}`;
-
-		const interestingComments = post.comments.edges.filter((edge) =>
-			matchesPainPointKeywords(edge.node.body),
+		const postTierInfo = getKeywordTier(postText);
+		const engagementSignal = calculateEngagementSignal(
+			post.votesCount,
+			post.comments.edges.length,
 		);
 
-		if (matchesPainPointKeywords(postText) || interestingComments.length > 0) {
+		const interestingComments: Array<{
+			comment: (typeof post.comments.edges)[0]['node'];
+			tierInfo: NonNullable<ReturnType<typeof getKeywordTier>>;
+			isQ: boolean;
+		}> = [];
+
+		for (const edge of post.comments.edges) {
+			const comment = edge.node;
+			const commentTierInfo = getKeywordTier(comment.body);
+			if (commentTierInfo || isQuestion(comment.body)) {
+				interestingComments.push({
+					comment,
+					tierInfo: commentTierInfo || { tier: 4, category: 'feature_request' },
+					isQ: isQuestion(comment.body),
+				});
+			}
+		}
+
+		const shouldInclude =
+			postTierInfo !== null ||
+			interestingComments.length > 0 ||
+			engagementSignal === 'high';
+
+		if (shouldInclude) {
 			results.push({
 				sourceId,
 				externalId: post.id,
@@ -201,12 +182,14 @@ export async function scrapeProductHunt(
 				metadata: {
 					tagline: post.tagline,
 					numComments: post.comments.edges.length,
+					keywordTier: postTierInfo?.tier ?? 4,
+					keywordCategory: postTierInfo?.category ?? 'engagement',
+					engagementSignal,
 				},
 				contentCreatedAt: new Date(post.createdAt),
 			});
 
-			for (const edge of interestingComments) {
-				const comment = edge.node;
+			for (const { comment, tierInfo, isQ } of interestingComments) {
 				results.push({
 					sourceId,
 					externalId: comment.id,
@@ -219,7 +202,9 @@ export async function scrapeProductHunt(
 					parentId: post.id,
 					metadata: {
 						postName: post.name,
-						postTagline: post.tagline,
+						keywordTier: tierInfo.tier,
+						keywordCategory: tierInfo.category,
+						isQuestion: isQ,
 					},
 					contentCreatedAt: new Date(comment.createdAt),
 				});
@@ -227,6 +212,6 @@ export async function scrapeProductHunt(
 		}
 	}
 
-	console.log(`Scraped ${results.length} items from Product Hunt`);
+	console.log(`[PH] Scraped ${results.length} items`);
 	return results;
 }
