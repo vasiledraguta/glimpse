@@ -9,6 +9,7 @@ import { TanStackDevtools } from '@tanstack/react-devtools';
 import { QueryClientProvider } from '@tanstack/react-query';
 import appCss from '../styles.css?url';
 import type { QueryClient } from '@tanstack/react-query';
+import Header from '@/components/header';
 
 export interface RouterContext {
 	queryClient: QueryClient;
@@ -56,7 +57,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 			<head>
 				<HeadContent />
 			</head>
-			<body>
+			<body className='min-h-screen bg-background'>
+				<Header />
 				{children}
 				<TanStackDevtools
 					config={{
