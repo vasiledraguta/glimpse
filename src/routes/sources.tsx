@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import {
 	IconBrandReddit,
+	IconDatabase,
 	IconNews,
 	IconPlus,
 	IconRocket,
@@ -30,6 +31,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
+import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -41,7 +43,8 @@ import {
 	AlertDialogTitle,
 	AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { SOURCE_TYPE_ICONS_LG, SOURCE_TYPE_LABELS } from '@/lib/ui-constants';
+import TabNavigation from '@/components/tab-navigation';
+import { SOURCE_TYPE_ICONS, SOURCE_TYPE_LABELS } from '@/lib/ui-constants';
 
 export const Route = createFileRoute('/sources')({ component: SourcesPage });
 
@@ -76,55 +79,68 @@ function SourcesPage() {
 		},
 	});
 
+	const enabledCount = sources.filter((s) => s.enabled).length;
+
 	return (
-		<main className='mx-auto max-w-6xl px-4 py-8'>
-			<div className='mb-8 flex items-center justify-between'>
-				<div>
-					<h1 className='text-2xl font-bold'>Sources</h1>
-					<p className='text-sm text-muted-foreground'>
-						Manage the data sources for scraping pain points
-					</p>
-				</div>
-				<Button onClick={() => setIsCreating(true)}>
-					<IconPlus data-icon='inline-start' className='size-4' />
-					Add Source
-				</Button>
-			</div>
+		<main className='mx-auto max-w-6xl px-4 py-6'>
+			<TabNavigation />
 
-			{isCreating && (
-				<CreateSourceForm
-					onCancel={() => setIsCreating(false)}
-					onSubmit={(data) => createMutation.mutate(data)}
-					isSubmitting={createMutation.isPending}
-				/>
-			)}
-
-			{isLoading ? (
-				<div className='py-8 text-center text-muted-foreground'>
-					Loading sources...
+			<div className='mt-6 space-y-6'>
+				{/* Page Header */}
+				<div className='flex items-center justify-between'>
+					<div>
+						<h2 className='text-2xl font-bold'>Sources</h2>
+						<p className='text-sm text-muted-foreground'>
+							{sources.length} sources · {enabledCount} enabled
+						</p>
+					</div>
+					<Button
+						onClick={() => setIsCreating(true)}
+						className='cursor-pointer'
+					>
+						<IconPlus className='size-4' />
+						Add Source
+					</Button>
 				</div>
-			) : sources.length === 0 ? (
-				<Card>
-					<CardContent className='py-8 text-center'>
-						<p className='text-muted-foreground'>
+
+				{/* Create Form (Collapsible) */}
+				<Collapsible open={isCreating} onOpenChange={setIsCreating}>
+					<CollapsibleContent>
+						<CreateSourceForm
+							onCancel={() => setIsCreating(false)}
+							onSubmit={(data) => createMutation.mutate(data)}
+							isSubmitting={createMutation.isPending}
+						/>
+					</CollapsibleContent>
+				</Collapsible>
+
+				{/* Sources List */}
+				{isLoading ? (
+					<div className='py-8 text-center text-muted-foreground'>
+						Loading sources...
+					</div>
+				) : sources.length === 0 ? (
+					<div className='rounded-lg border border-dashed p-8 text-center'>
+						<IconDatabase className='mx-auto size-10 text-muted-foreground/50' />
+						<p className='mt-3 text-sm text-muted-foreground'>
 							No sources configured yet. Add a source to start scraping.
 						</p>
-					</CardContent>
-				</Card>
-			) : (
-				<div className='space-y-4'>
-					{sources.map((source) => (
-						<SourceCard
-							key={source.id}
-							source={source}
-							onToggle={() => toggleMutation.mutate({ id: source.id })}
-							onDelete={() => deleteMutation.mutate({ id: source.id })}
-							isToggling={toggleMutation.isPending}
-							isDeleting={deleteMutation.isPending}
-						/>
-					))}
-				</div>
-			)}
+					</div>
+				) : (
+					<div className='space-y-2'>
+						{sources.map((source) => (
+							<SourceCard
+								key={source.id}
+								source={source}
+								onToggle={() => toggleMutation.mutate({ id: source.id })}
+								onDelete={() => deleteMutation.mutate({ id: source.id })}
+								isToggling={toggleMutation.isPending}
+								isDeleting={deleteMutation.isPending}
+							/>
+						))}
+					</div>
+				)}
+			</div>
 		</main>
 	);
 }
@@ -144,79 +160,84 @@ const SourceCard = ({
 }) => {
 	const config = source.config;
 	const configDisplay = getConfigDisplay(source.type, config);
+	const sourceIcon = SOURCE_TYPE_ICONS[source.type as SourceType];
 
 	return (
-		<Card>
-			<CardHeader className='flex-row items-center justify-between'>
-				<div className='flex items-center gap-3'>
-					<div className='text-muted-foreground'>
-						{SOURCE_TYPE_ICONS_LG[source.type as SourceType]}
-					</div>
-					<div>
-						<CardTitle className='text-base'>{source.name}</CardTitle>
-						<p className='text-sm text-muted-foreground'>
-							{SOURCE_TYPE_LABELS[source.type as SourceType]}
-						</p>
-					</div>
-				</div>
-				<div className='flex items-center gap-2'>
-					<Badge variant={source.enabled ? 'default' : 'secondary'}>
-						{source.enabled ? 'Enabled' : 'Disabled'}
-					</Badge>
-				</div>
-			</CardHeader>
-			<CardContent>
-				<div className='flex items-center justify-between'>
-					<div className='text-sm text-muted-foreground'>{configDisplay}</div>
+		<div className='flex items-center justify-between gap-4 rounded-lg border bg-card p-4'>
+			<div className='flex items-center gap-3'>
+				<div className='text-muted-foreground'>{sourceIcon}</div>
+				<div>
 					<div className='flex items-center gap-2'>
+						<span className='font-medium'>{source.name}</span>
+						<Badge
+							variant={source.enabled ? 'default' : 'outline'}
+							className='text-xs'
+						>
+							{source.enabled ? 'On' : 'Off'}
+						</Badge>
+					</div>
+					<div className='flex items-center gap-2 text-xs text-muted-foreground'>
+						<span>{SOURCE_TYPE_LABELS[source.type as SourceType]}</span>
+						<span>·</span>
+						<span>{configDisplay}</span>
+						{source.lastScrapedAt && (
+							<>
+								<span>·</span>
+								<span>
+									Last: {new Date(source.lastScrapedAt).toLocaleDateString()}
+								</span>
+							</>
+						)}
+					</div>
+				</div>
+			</div>
+			<div className='flex items-center gap-1'>
+				<Button
+					variant='ghost'
+					size='icon-sm'
+					onClick={onToggle}
+					disabled={isToggling}
+					title={source.enabled ? 'Disable source' : 'Enable source'}
+					className='cursor-pointer'
+				>
+					{source.enabled ? (
+						<IconToggleRight className='size-5 text-primary' />
+					) : (
+						<IconToggleLeft className='size-5' />
+					)}
+				</Button>
+				<AlertDialog>
+					<AlertDialogTrigger>
 						<Button
 							variant='ghost'
 							size='icon-sm'
-							onClick={onToggle}
-							disabled={isToggling}
-							title={source.enabled ? 'Disable source' : 'Enable source'}
+							className='cursor-pointer text-destructive hover:text-destructive'
 						>
-							{source.enabled ? (
-								<IconToggleRight className='size-5' />
-							) : (
-								<IconToggleLeft className='size-5' />
-							)}
+							<IconTrash className='size-4' />
 						</Button>
-						<AlertDialog>
-							<AlertDialogTrigger>
-								<Button variant='destructive' size='icon-sm'>
-									<IconTrash className='size-4' />
-								</Button>
-							</AlertDialogTrigger>
-							<AlertDialogContent>
-								<AlertDialogHeader>
-									<AlertDialogTitle>Delete Source</AlertDialogTitle>
-									<AlertDialogDescription>
-										Are you sure you want to delete &quot;{source.name}&quot;?
-										This action cannot be undone.
-									</AlertDialogDescription>
-								</AlertDialogHeader>
-								<AlertDialogFooter>
-									<AlertDialogCancel>Cancel</AlertDialogCancel>
-									<AlertDialogAction
-										onClick={onDelete}
-										disabled={isDeleting}
-										className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
-									>
-										Delete
-									</AlertDialogAction>
-								</AlertDialogFooter>
-							</AlertDialogContent>
-						</AlertDialog>
-					</div>
-				</div>
-				{source.lastScrapedAt && (
-					<p className='mt-2 text-xs text-muted-foreground'>
-						Last scraped: {new Date(source.lastScrapedAt).toLocaleString()}
-					</p>
-				)}
-			</CardContent>
-		</Card>
+					</AlertDialogTrigger>
+					<AlertDialogContent>
+						<AlertDialogHeader>
+							<AlertDialogTitle>Delete Source</AlertDialogTitle>
+							<AlertDialogDescription>
+								Are you sure you want to delete &quot;{source.name}&quot;? This
+								action cannot be undone.
+							</AlertDialogDescription>
+						</AlertDialogHeader>
+						<AlertDialogFooter>
+							<AlertDialogCancel>Cancel</AlertDialogCancel>
+							<AlertDialogAction
+								onClick={onDelete}
+								disabled={isDeleting}
+								className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
+							>
+								Delete
+							</AlertDialogAction>
+						</AlertDialogFooter>
+					</AlertDialogContent>
+				</AlertDialog>
+			</div>
+		</div>
 	);
 };
 

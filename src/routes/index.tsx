@@ -2,14 +2,20 @@ import { Link, createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
 	IconBrain,
+	IconBulb,
+	IconChevronRight,
+	IconDatabase,
 	IconLoader2,
 	IconRefresh,
-	IconSettings,
+	IconStack2,
 	IconX,
 } from '@tabler/icons-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import InsightCard from '@/components/insight-card';
+import { Badge } from '@/components/ui/badge';
+import TabNavigation from '@/components/tab-navigation';
+import StatsCard from '@/components/stats-card';
+import ActionCard from '@/components/action-card';
+import { CATEGORY_COLORS, SOURCE_TYPE_ICONS } from '@/lib/ui-constants';
 import {
 	getInsights,
 	getProcessingStatus,
@@ -24,8 +30,8 @@ function Dashboard() {
 	const queryClient = useQueryClient();
 
 	const { data: insights = [], isLoading: insightsLoading } = useQuery({
-		queryKey: ['insights', { limit: 10 }],
-		queryFn: () => getInsights({ data: { limit: 10, offset: 0 } }),
+		queryKey: ['insights', { limit: 5 }],
+		queryFn: () => getInsights({ data: { limit: 5, offset: 0 } }),
 	});
 
 	const { data: sources = [] } = useQuery({
@@ -63,157 +69,184 @@ function Dashboard() {
 	const unprocessedCount = processingStatus?.unprocessedCount ?? 0;
 
 	return (
-		<main className='mx-auto max-w-6xl px-4 py-8'>
-			{/* Stats Cards */}
-			<div className='mb-8 grid gap-4 sm:grid-cols-3'>
-				<Card>
-					<CardHeader className='pb-2'>
-						<CardTitle className='text-sm font-medium text-muted-foreground'>
-							Active Sources
-						</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<div className='flex items-center justify-between'>
-							<span className='text-2xl font-bold'>{enabledSourcesCount}</span>
+		<main className='mx-auto max-w-6xl px-4 py-6'>
+			<TabNavigation />
+
+			<div className='mt-6 space-y-8'>
+				{/* Stats Overview */}
+				<div className='grid gap-4 sm:grid-cols-3'>
+					<StatsCard
+						label='Active Sources'
+						value={enabledSourcesCount}
+						icon={<IconDatabase className='size-5 text-muted-foreground' />}
+						action={
 							<Link to='/sources'>
 								<Button
 									variant='ghost'
 									size='icon-sm'
 									className='cursor-pointer'
 								>
-									<IconSettings className='size-4' />
+									<IconChevronRight className='size-4' />
 								</Button>
 							</Link>
-						</div>
-					</CardContent>
-				</Card>
-
-				<Card>
-					<CardHeader className='pb-2'>
-						<CardTitle className='text-sm font-medium text-muted-foreground'>
-							Unprocessed Items
-						</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<div className='flex items-center justify-between'>
-							<span className='text-2xl font-bold'>{unprocessedCount}</span>
-							<Button
-								variant='outline'
-								size='sm'
-								className='cursor-pointer'
-								onClick={() => processMutation.mutate()}
-								disabled={processMutation.isPending || unprocessedCount === 0}
-							>
-								{processMutation.isPending ? (
-									<IconLoader2 className='size-4 animate-spin' />
-								) : (
-									<IconBrain className='size-4' />
-								)}
-								Process
-							</Button>
-						</div>
-					</CardContent>
-				</Card>
-
-				<Card>
-					<CardHeader className='pb-2'>
-						<CardTitle className='text-sm font-medium text-muted-foreground'>
-							Total Insights
-						</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<div className='flex items-center justify-between'>
-							<span className='text-2xl font-bold'>{insights.length}+</span>
+						}
+					/>
+					<StatsCard
+						label='Unprocessed'
+						value={unprocessedCount}
+						icon={<IconStack2 className='size-5 text-muted-foreground' />}
+					/>
+					<StatsCard
+						label='Total Insights'
+						value={`${insights.length}+`}
+						icon={<IconBulb className='size-5 text-muted-foreground' />}
+						action={
 							<Link to='/insights'>
 								<Button variant='ghost' size='sm' className='cursor-pointer'>
-									View All
+									View all
+								</Button>
+							</Link>
+						}
+					/>
+				</div>
+
+				{/* Action Center */}
+				<section>
+					<h2 className='mb-4 text-lg font-semibold'>Pipeline</h2>
+					<div className='grid gap-4 md:grid-cols-2'>
+						<ActionCard
+							title='Scrape Sources'
+							description='Fetch new content from all enabled sources'
+							icon={<IconRefresh className='size-5' />}
+							actionLabel='Scrape All'
+							pendingLabel='Scraping...'
+							onAction={() => scrapeMutation.mutate()}
+							isPending={scrapeMutation.isPending}
+							isDisabled={enabledSourcesCount === 0}
+							secondaryAction={
+								scrapeMutation.isPending && (
+									<Button
+										variant='destructive'
+										size='sm'
+										onClick={() => stopMutation.mutate()}
+										disabled={stopMutation.isPending}
+										className='cursor-pointer'
+									>
+										<IconX className='size-4' />
+										Stop
+									</Button>
+								)
+							}
+							result={
+								scrapeMutation.isSuccess && (
+									<>
+										Scraped{' '}
+										{scrapeMutation.data.reduce(
+											(acc, r) => acc + r.itemsFound,
+											0,
+										)}{' '}
+										items from{' '}
+										{scrapeMutation.data.filter((r) => r.success).length}{' '}
+										sources
+									</>
+								)
+							}
+						/>
+
+						<ActionCard
+							title='Process with AI'
+							description='Extract insights from unprocessed content'
+							icon={<IconBrain className='size-5' />}
+							actionLabel='Process'
+							pendingLabel='Processing...'
+							onAction={() => processMutation.mutate()}
+							isPending={processMutation.isPending}
+							isDisabled={unprocessedCount === 0}
+							variant='secondary'
+							statusBadge={
+								unprocessedCount > 0 && (
+									<Badge variant='secondary'>{unprocessedCount} pending</Badge>
+								)
+							}
+							result={
+								processMutation.isSuccess && (
+									<>Processed {processMutation.data.processed} items</>
+								)
+							}
+						/>
+					</div>
+				</section>
+
+				{/* Recent Insights Preview */}
+				<section>
+					<div className='mb-4 flex items-center justify-between'>
+						<h2 className='text-lg font-semibold'>Recent Insights</h2>
+						<Link to='/insights'>
+							<Button variant='ghost' size='sm' className='cursor-pointer'>
+								View all <IconChevronRight className='size-4' />
+							</Button>
+						</Link>
+					</div>
+
+					{insightsLoading ? (
+						<div className='flex items-center justify-center py-8'>
+							<IconLoader2 className='size-6 animate-spin text-muted-foreground' />
+						</div>
+					) : insights.length === 0 ? (
+						<div className='rounded-lg border border-dashed p-8 text-center'>
+							<IconBulb className='mx-auto size-10 text-muted-foreground/50' />
+							<p className='mt-3 text-sm text-muted-foreground'>
+								No insights yet. Add sources and scrape to get started.
+							</p>
+							<Link to='/sources' className='mt-4 inline-block'>
+								<Button variant='outline' size='sm'>
+									Add Sources
 								</Button>
 							</Link>
 						</div>
-					</CardContent>
-				</Card>
-			</div>
-
-			{/* Actions */}
-			<div className='mb-8 flex flex-wrap gap-4'>
-				<Button
-					onClick={() => scrapeMutation.mutate()}
-					disabled={scrapeMutation.isPending || enabledSourcesCount === 0}
-					className='cursor-pointer'
-				>
-					{scrapeMutation.isPending ? (
-						<IconLoader2
-							data-icon='inline-start'
-							className='size-4 animate-spin'
-						/>
 					) : (
-						<IconRefresh data-icon='inline-start' className='size-4' />
+						<div className='space-y-2'>
+							{insights.map(({ insight, scrapeResult, source }) => {
+								const sourceIcon =
+									SOURCE_TYPE_ICONS[
+										source.type as keyof typeof SOURCE_TYPE_ICONS
+									];
+								return (
+									<div
+										key={insight.id}
+										className='flex items-start gap-4 rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50'
+									>
+										<Badge
+											className={`shrink-0 ${CATEGORY_COLORS[insight.category as keyof typeof CATEGORY_COLORS] || ''}`}
+										>
+											{insight.category.replace('_', ' ')}
+										</Badge>
+										<div className='min-w-0 flex-1'>
+											<p className='line-clamp-2 text-sm'>{insight.summary}</p>
+											<div className='mt-2 flex items-center gap-3 text-xs text-muted-foreground'>
+												<span className='flex items-center gap-1'>
+													{sourceIcon}
+													{source.name}
+												</span>
+												<span>{Math.round(insight.confidence * 100)}%</span>
+												{scrapeResult.url && (
+													<a
+														href={scrapeResult.url}
+														target='_blank'
+														rel='noopener noreferrer'
+														className='hover:underline'
+													>
+														Source
+													</a>
+												)}
+											</div>
+										</div>
+									</div>
+								);
+							})}
+						</div>
 					)}
-					{scrapeMutation.isPending ? 'Scraping...' : 'Scrape All Sources'}
-				</Button>
-
-				{scrapeMutation.isPending && (
-					<Button
-						variant='destructive'
-						onClick={() => stopMutation.mutate()}
-						disabled={stopMutation.isPending}
-					>
-						<IconX data-icon='inline-start' className='size-4' />
-						{stopMutation.isPending ? 'Stopping...' : 'Stop Scraping'}
-					</Button>
-				)}
-
-				{scrapeMutation.isSuccess && (
-					<div className='flex items-center gap-2 text-sm text-muted-foreground'>
-						Scraped{' '}
-						{scrapeMutation.data.reduce((acc, r) => acc + r.itemsFound, 0)}{' '}
-						items from {scrapeMutation.data.filter((r) => r.success).length}{' '}
-						sources
-					</div>
-				)}
-
-				{processMutation.isSuccess && (
-					<div className='flex items-center gap-2 text-sm text-muted-foreground'>
-						Processed {processMutation.data.processed} items
-					</div>
-				)}
-			</div>
-
-			{/* Recent Insights */}
-			<div>
-				<div className='mb-4 flex items-center justify-between'>
-					<h2 className='text-lg font-semibold'>Recent Insights</h2>
-				</div>
-
-				{insightsLoading ? (
-					<div className='flex items-center justify-center py-8'>
-						<IconLoader2 className='size-6 animate-spin text-muted-foreground' />
-					</div>
-				) : insights.length === 0 ? (
-					<Card>
-						<CardContent className='py-8 text-center'>
-							<p className='text-muted-foreground'>
-								No insights yet. Add sources and scrape to get started.
-							</p>
-							<div className='mt-4 flex justify-center gap-2'>
-								<Link to='/sources'>
-									<Button variant='outline'>Add Sources</Button>
-								</Link>
-							</div>
-						</CardContent>
-					</Card>
-				) : (
-					<div className='space-y-4'>
-						{insights.map(({ insight, scrapeResult, source }) => (
-							<InsightCard
-								key={insight.id}
-								insight={insight}
-								scrapeResult={scrapeResult}
-								source={source}
-							/>
-						))}
-					</div>
-				)}
+				</section>
 			</div>
 		</main>
 	);

@@ -1,17 +1,17 @@
-import { Link, createFileRoute, useSearch } from '@tanstack/react-router';
+import {
+	Link,
+	createFileRoute,
+	useNavigate,
+	useSearch,
+} from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
-import { IconBrain, IconFilter, IconLoader2 } from '@tabler/icons-react';
+import { IconBrain } from '@tabler/icons-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from '@/components/ui/select';
-import InsightCard from '@/components/insight-card';
-import { CATEGORIES, CATEGORY_LABELS } from '@/lib/ui-constants';
+import TabNavigation from '@/components/tab-navigation';
+import { InsightsTable } from '@/components/insights-table';
+import InsightsFilters from '@/components/insights-filters';
+import { CATEGORY_LABELS } from '@/lib/ui-constants';
 import { getInsights } from '@/server/insights';
 
 const ITEMS_PER_PAGE = 20;
@@ -19,6 +19,13 @@ const ITEMS_PER_PAGE = 20;
 type SearchParams = {
 	page?: number;
 	category?: 'complaint' | 'feature_request' | 'pain_point' | 'idea' | 'other';
+	opportunityType?:
+		| 'gap'
+		| 'improvement'
+		| 'workflow'
+		| 'pricing'
+		| 'integration';
+	minConfidence?: number;
 };
 
 export const Route = createFileRoute('/insights')({
@@ -26,22 +33,39 @@ export const Route = createFileRoute('/insights')({
 	validateSearch: (search: Record<string, unknown>): SearchParams => ({
 		page: Number(search.page) || 1,
 		category: search.category as SearchParams['category'],
+		opportunityType: search.opportunityType as SearchParams['opportunityType'],
+		minConfidence: Number(search.minConfidence) || 0,
 	}),
 });
 
 function InsightsPage() {
-	const { page, category } = useSearch({ from: '/insights' });
+	const navigate = useNavigate();
+	const { page, category, opportunityType, minConfidence } = useSearch({
+		from: '/insights',
+	});
 	const currentPage = page || 1;
+	const currentConfidence = minConfidence || 0;
 	const offset = (currentPage - 1) * ITEMS_PER_PAGE;
 
 	const { data: insights = [], isLoading } = useQuery({
-		queryKey: ['insights', { limit: ITEMS_PER_PAGE, offset, category }],
+		queryKey: [
+			'insights',
+			{
+				limit: ITEMS_PER_PAGE,
+				offset,
+				category,
+				opportunityType,
+				minConfidence: currentConfidence / 100,
+			},
+		],
 		queryFn: () =>
 			getInsights({
 				data: {
 					limit: ITEMS_PER_PAGE,
 					offset,
 					category,
+					opportunityType,
+					minConfidence: currentConfidence / 100,
 				},
 			}),
 	});
@@ -49,126 +73,143 @@ function InsightsPage() {
 	const hasNextPage = insights.length === ITEMS_PER_PAGE;
 	const hasPrevPage = currentPage > 1;
 
+	const updateFilters = (updates: Partial<SearchParams>) => {
+		navigate({
+			to: '/insights',
+			search: {
+				page:
+					updates.page !== undefined
+						? updates.page
+						: updates.category !== undefined ||
+							  updates.opportunityType !== undefined ||
+							  updates.minConfidence !== undefined
+							? 1
+							: currentPage,
+				category: updates.category !== undefined ? updates.category : category,
+				opportunityType:
+					updates.opportunityType !== undefined
+						? updates.opportunityType
+						: opportunityType,
+				minConfidence:
+					updates.minConfidence !== undefined
+						? updates.minConfidence
+						: currentConfidence,
+			},
+		});
+	};
+
+	const clearFilters = () => {
+		navigate({
+			to: '/insights',
+			search: { page: 1 },
+		});
+	};
+
+	const hasActiveFilters = category || opportunityType || currentConfidence > 0;
+
 	return (
-		<main className='mx-auto max-w-6xl px-4 py-8'>
-			{/* Page Header */}
-			<div className='mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>
+		<main className='mx-auto max-w-6xl px-4 py-6'>
+			<TabNavigation />
+
+			<div className='mt-6 space-y-6'>
+				{/* Page Header */}
 				<div>
 					<h2 className='text-2xl font-bold'>Insights</h2>
 					<p className='text-sm text-muted-foreground'>
-						AI-extracted insights from scraped content
+						AI-extracted opportunities from scraped content
 					</p>
 				</div>
 
-				{/* Category Filter */}
-				<div className='flex items-center gap-2'>
-					<IconFilter className='size-4 text-muted-foreground' />
-					<Select
-						value={category || 'all'}
-						onValueChange={(value) => {
-							const newCategory =
-								value === 'all'
-									? undefined
-									: (value as SearchParams['category']);
-							window.history.pushState(
-								{},
-								'',
-								newCategory ? `/insights?category=${newCategory}` : '/insights',
-							);
-							window.location.reload();
-						}}
-					>
-						<SelectTrigger className='w-48'>
-							<SelectValue>
-								{category
-									? CATEGORIES.find((c) => c.value === category)?.label
-									: 'All Categories'}
-							</SelectValue>
-						</SelectTrigger>
-						<SelectContent>
-							{CATEGORIES.map((cat) => (
-								<SelectItem key={cat.value} value={cat.value}>
-									{cat.label}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</div>
-			</div>
+				{/* Filters */}
+				<InsightsFilters
+					category={category}
+					opportunityType={opportunityType}
+					minConfidence={currentConfidence}
+					onCategoryChange={(value) =>
+						updateFilters({ category: value as SearchParams['category'] })
+					}
+					onOpportunityTypeChange={(value) =>
+						updateFilters({
+							opportunityType: value as SearchParams['opportunityType'],
+						})
+					}
+					onConfidenceChange={(value) =>
+						updateFilters({ minConfidence: value })
+					}
+					onClearFilters={clearFilters}
+				/>
 
-			{/* Insights List */}
-			{isLoading ? (
-				<div className='flex items-center justify-center py-16'>
-					<IconLoader2 className='size-8 animate-spin text-muted-foreground' />
-				</div>
-			) : insights.length === 0 ? (
-				<Card>
-					<CardContent className='py-16 text-center'>
-						<IconBrain className='mx-auto size-12 text-muted-foreground/50' />
-						<h3 className='mt-4 text-lg font-medium'>No insights found</h3>
-						<p className='mt-2 text-sm text-muted-foreground'>
-							{category
-								? `No ${CATEGORY_LABELS[category].toLowerCase()}s found. Try a different category or scrape more sources.`
-								: 'Scrape some sources and process them with AI to generate insights.'}
-						</p>
-						<div className='mt-6 flex justify-center gap-4'>
-							<Link to='/sources'>
-								<Button variant='outline'>Manage Sources</Button>
-							</Link>
-							<Link to='/'>
-								<Button>Go to Dashboard</Button>
-							</Link>
-						</div>
-					</CardContent>
-				</Card>
-			) : (
-				<>
-					<div className='space-y-4'>
-						{insights.map(({ insight, scrapeResult, source }) => (
-							<InsightCard
-								key={insight.id}
-								insight={insight}
-								scrapeResult={scrapeResult}
-								source={source}
-							/>
-						))}
+				{/* Results Info */}
+				{!isLoading && insights.length > 0 && (
+					<div className='text-sm text-muted-foreground'>
+						Showing {offset + 1}-{offset + insights.length} insights
+						{hasActiveFilters && ' (filtered)'}
 					</div>
+				)}
 
-					{/* Pagination */}
-					<div className='mt-8 flex items-center justify-between'>
+				{/* Insights Table */}
+				{isLoading ? (
+					<InsightsTable insights={[]} isLoading />
+				) : insights.length === 0 ? (
+					<Card>
+						<CardContent className='py-16 text-center'>
+							<IconBrain className='mx-auto size-12 text-muted-foreground/50' />
+							<h3 className='mt-4 text-lg font-medium'>No insights found</h3>
+							<p className='mt-2 text-sm text-muted-foreground'>
+								{hasActiveFilters
+									? 'No insights match your filters. Try adjusting or clearing them.'
+									: 'Scrape some sources and process them with AI to generate insights.'}
+							</p>
+							<div className='mt-6 flex justify-center gap-4'>
+								{hasActiveFilters ? (
+									<Button variant='outline' onClick={clearFilters}>
+										Clear Filters
+									</Button>
+								) : (
+									<>
+										<Link to='/sources'>
+											<Button variant='outline'>Manage Sources</Button>
+										</Link>
+										<Link to='/'>
+											<Button>Go to Dashboard</Button>
+										</Link>
+									</>
+								)}
+							</div>
+						</CardContent>
+					</Card>
+				) : (
+					<InsightsTable insights={insights} />
+				)}
+
+				{/* Pagination */}
+				{!isLoading && insights.length > 0 && (
+					<div className='flex items-center justify-between'>
 						<p className='text-sm text-muted-foreground'>
 							Page {currentPage}
-							{category && ` - Filtered by: ${CATEGORY_LABELS[category]}`}
+							{category && ` · ${CATEGORY_LABELS[category]}`}
 						</p>
 						<div className='flex gap-2'>
-							<Link
-								to='/insights'
-								search={{
-									page: currentPage - 1,
-									category,
-								}}
+							<Button
+								variant='outline'
 								disabled={!hasPrevPage}
+								onClick={() => updateFilters({ page: currentPage - 1 })}
+								className='cursor-pointer'
 							>
-								<Button variant='outline' disabled={!hasPrevPage}>
-									Previous
-								</Button>
-							</Link>
-							<Link
-								to='/insights'
-								search={{
-									page: currentPage + 1,
-									category,
-								}}
+								Previous
+							</Button>
+							<Button
+								variant='outline'
 								disabled={!hasNextPage}
+								onClick={() => updateFilters({ page: currentPage + 1 })}
+								className='cursor-pointer'
 							>
-								<Button variant='outline' disabled={!hasNextPage}>
-									Next
-								</Button>
-							</Link>
+								Next
+							</Button>
 						</div>
 					</div>
-				</>
-			)}
+				)}
+			</div>
 		</main>
 	);
 }
