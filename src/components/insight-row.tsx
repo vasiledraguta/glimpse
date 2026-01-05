@@ -2,7 +2,6 @@ import { useState } from 'react';
 import {
 	IconBulb,
 	IconChevronDown,
-	IconChevronUp,
 	IconExternalLink,
 } from '@tabler/icons-react';
 import { Badge } from '@/components/ui/badge';
@@ -71,19 +70,19 @@ const InsightRow = ({ insight, scrapeResult, source }: InsightRowProps) => {
 				)}
 			>
 				{/* Collapsed Row */}
-				<CollapsibleTrigger className='grid w-full grid-cols-[auto_1fr_auto_auto_auto_auto] items-center gap-4 p-4 text-left hover:bg-muted/50'>
+				<CollapsibleTrigger className='grid w-full grid-cols-[6rem_1fr_3.5rem_8rem_4rem_auto] items-center gap-4 p-4 text-left hover:bg-muted/50'>
 					{/* Category */}
-					<Badge className={cn('shrink-0', categoryColor)}>
+					<Badge className={cn('w-24 shrink-0 justify-center', categoryColor)}>
 						{insight.category.replace('_', ' ')}
 					</Badge>
 
 					{/* Summary */}
-					<p className='line-clamp-1 min-w-0 text-sm'>{insight.summary}</p>
+					<p className='min-w-0 truncate text-sm'>{insight.summary}</p>
 
 					{/* Confidence */}
 					<span
 						className={cn(
-							'text-xs font-medium tabular-nums',
+							'text-xs font-medium tabular-nums text-right',
 							insight.confidence >= 0.8
 								? 'text-emerald-600 dark:text-emerald-400'
 								: insight.confidence >= 0.6
@@ -95,24 +94,24 @@ const InsightRow = ({ insight, scrapeResult, source }: InsightRowProps) => {
 					</span>
 
 					{/* Source */}
-					<span className='flex items-center gap-1 text-xs text-muted-foreground'>
+					<span className='flex shrink-0 items-center gap-1 text-xs text-muted-foreground'>
 						{sourceIcon}
 						<span className='hidden sm:inline'>{source.name}</span>
 					</span>
 
 					{/* Date */}
-					<span className='text-xs text-muted-foreground'>{formattedDate}</span>
+					<span className='shrink-0 text-xs text-muted-foreground'>{formattedDate}</span>
 
 					{/* Expand Icon */}
-					{isExpanded ? (
-						<IconChevronUp className='size-4 text-muted-foreground' />
-					) : (
-						<IconChevronDown className='size-4 text-muted-foreground' />
-					)}
+					<IconChevronDown
+						className={cn(
+							'size-4 text-muted-foreground transition-transform duration-200 ease-out',
+							isExpanded && 'rotate-180',
+						)}
+					/>
 				</CollapsibleTrigger>
 
-				{/* Expanded Content */}
-				<CollapsibleContent>
+				<CollapsibleContent className='transition-all duration-200 ease-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0'>
 					<div className='border-t px-4 py-4'>
 						<div className='grid gap-4 sm:grid-cols-2'>
 							{/* Left Column */}
