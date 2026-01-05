@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import TabNavigation from '@/components/tab-navigation';
 import StatsCard from '@/components/stats-card';
 import ActionCard from '@/components/action-card';
-import { CATEGORY_COLORS, SOURCE_TYPE_ICONS } from '@/lib/ui-constants';
+import InsightPreviewCard from '@/components/insight-preview-card';
 import {
 	getInsights,
 	getProcessingStatus,
@@ -206,44 +206,14 @@ function Dashboard() {
 						</div>
 					) : (
 						<div className='space-y-2'>
-							{insights.map(({ insight, scrapeResult, source }) => {
-								const sourceIcon =
-									SOURCE_TYPE_ICONS[
-										source.type as keyof typeof SOURCE_TYPE_ICONS
-									];
-								return (
-									<div
-										key={insight.id}
-										className='flex items-start gap-4 rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50'
-									>
-										<Badge
-											className={`shrink-0 ${CATEGORY_COLORS[insight.category as keyof typeof CATEGORY_COLORS] || ''}`}
-										>
-											{insight.category.replace('_', ' ')}
-										</Badge>
-										<div className='min-w-0 flex-1'>
-											<p className='line-clamp-2 text-sm'>{insight.summary}</p>
-											<div className='mt-2 flex items-center gap-3 text-xs text-muted-foreground'>
-												<span className='flex items-center gap-1'>
-													{sourceIcon}
-													{source.name}
-												</span>
-												<span>{Math.round(insight.confidence * 100)}%</span>
-												{scrapeResult.url && (
-													<a
-														href={scrapeResult.url}
-														target='_blank'
-														rel='noopener noreferrer'
-														className='hover:underline'
-													>
-														Source
-													</a>
-												)}
-											</div>
-										</div>
-									</div>
-								);
-							})}
+							{insights.map(({ insight, scrapeResult, source }) => (
+								<InsightPreviewCard
+									key={insight.id}
+									insight={insight}
+									scrapeResult={scrapeResult}
+									source={source}
+								/>
+							))}
 						</div>
 					)}
 				</section>
