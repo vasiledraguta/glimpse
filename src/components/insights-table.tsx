@@ -33,6 +33,8 @@ interface InsightsTableProps {
 		source: Source;
 	}>;
 	isLoading?: boolean;
+	onDelete?: (id: string) => void;
+	isDeleting?: boolean;
 }
 
 const InsightsTableSkeleton = () => (
@@ -53,7 +55,12 @@ const InsightsTableSkeleton = () => (
 	</div>
 );
 
-const InsightsTable = ({ insights, isLoading }: InsightsTableProps) => {
+const InsightsTable = ({
+	insights,
+	isLoading,
+	onDelete,
+	isDeleting,
+}: InsightsTableProps) => {
 	if (isLoading) {
 		return (
 			<div className='flex items-center justify-center py-16'>
@@ -70,6 +77,8 @@ const InsightsTable = ({ insights, isLoading }: InsightsTableProps) => {
 					insight={insight}
 					scrapeResult={scrapeResult}
 					source={source}
+					onDelete={onDelete ? () => onDelete(insight.id) : undefined}
+					isDeleting={isDeleting}
 				/>
 			))}
 		</div>

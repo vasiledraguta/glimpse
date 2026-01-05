@@ -3,6 +3,7 @@ import {
 	IconBulb,
 	IconChevronDown,
 	IconExternalLink,
+	IconX,
 } from '@tabler/icons-react';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -10,6 +11,18 @@ import {
 	CollapsibleContent,
 	CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { Button } from '@/components/ui/button';
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+	AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import {
 	CATEGORY_COLORS,
 	OPPORTUNITY_TYPE_COLORS,
@@ -40,9 +53,17 @@ interface InsightRowProps {
 		type: string;
 		name: string;
 	};
+	onDelete?: () => void;
+	isDeleting?: boolean;
 }
 
-const InsightRow = ({ insight, scrapeResult, source }: InsightRowProps) => {
+const InsightRow = ({
+	insight,
+	scrapeResult,
+	source,
+	onDelete,
+	isDeleting,
+}: InsightRowProps) => {
 	const [isExpanded, setIsExpanded] = useState(false);
 
 	const sourceIcon =
@@ -70,48 +91,86 @@ const InsightRow = ({ insight, scrapeResult, source }: InsightRowProps) => {
 				)}
 			>
 				{/* Collapsed Row */}
-				<CollapsibleTrigger className='grid w-full grid-cols-[6rem_1fr_3.5rem_8rem_4rem_auto] items-center gap-4 p-4 text-left hover:bg-muted/50'>
-					{/* Category */}
-					<Badge className={cn('w-24 shrink-0 justify-center', categoryColor)}>
-						{insight.category.replace('_', ' ')}
-					</Badge>
+				<div className='grid w-full grid-cols-[6rem_1fr_3.5rem_8rem_4rem_auto_auto] items-center gap-4 p-4'>
+					<CollapsibleTrigger className='col-span-6 grid grid-cols-subgrid items-center gap-4 text-left hover:bg-muted/50'>
+						{/* Category */}
+						<Badge
+							className={cn('w-24 shrink-0 justify-center', categoryColor)}
+						>
+							{insight.category.replace('_', ' ')}
+						</Badge>
 
-					{/* Summary */}
-					<p className='min-w-0 truncate text-sm'>{insight.summary}</p>
+						{/* Summary */}
+						<p className='min-w-0 truncate text-sm'>{insight.summary}</p>
 
-					{/* Confidence */}
-					<span
-						className={cn(
-							'text-xs font-medium tabular-nums text-right',
-							insight.confidence >= 0.8
-								? 'text-emerald-600 dark:text-emerald-400'
-								: insight.confidence >= 0.6
-									? 'text-amber-600 dark:text-amber-400'
-									: 'text-muted-foreground',
-						)}
-					>
-						{Math.round(insight.confidence * 100)}%
-					</span>
+						{/* Confidence */}
+						<span
+							className={cn(
+								'text-xs font-medium tabular-nums text-right',
+								insight.confidence >= 0.8
+									? 'text-emerald-600 dark:text-emerald-400'
+									: insight.confidence >= 0.6
+										? 'text-amber-600 dark:text-amber-400'
+										: 'text-muted-foreground',
+							)}
+						>
+							{Math.round(insight.confidence * 100)}%
+						</span>
 
-					{/* Source */}
-					<span className='flex shrink-0 items-center gap-1 text-xs text-muted-foreground'>
-						{sourceIcon}
-						<span className='hidden sm:inline'>{source.name}</span>
-					</span>
+						{/* Source */}
+						<span className='flex shrink-0 items-center gap-1 text-xs text-muted-foreground'>
+							{sourceIcon}
+							<span className='hidden sm:inline'>{source.name}</span>
+						</span>
 
-					{/* Date */}
-					<span className='shrink-0 text-xs text-muted-foreground'>
-						{formattedDate}
-					</span>
+						{/* Date */}
+						<span className='shrink-0 text-xs text-muted-foreground'>
+							{formattedDate}
+						</span>
 
-					{/* Expand Icon */}
-					<IconChevronDown
-						className={cn(
-							'size-4 text-muted-foreground transition-transform duration-200 ease-out',
-							isExpanded && 'rotate-180',
-						)}
-					/>
-				</CollapsibleTrigger>
+						{/* Expand Icon */}
+						<IconChevronDown
+							className={cn(
+								'size-4 text-muted-foreground transition-transform duration-200 ease-out',
+								isExpanded && 'rotate-180',
+							)}
+						/>
+					</CollapsibleTrigger>
+
+					{/* Delete Button */}
+					{onDelete && (
+						<AlertDialog>
+							<AlertDialogTrigger>
+								<Button
+									variant='ghost'
+									size='icon-sm'
+									className='shrink-0 cursor-pointer text-destructive hover:text-destructive'
+								>
+									<IconX className='size-4' />
+								</Button>
+							</AlertDialogTrigger>
+							<AlertDialogContent>
+								<AlertDialogHeader>
+									<AlertDialogTitle>Delete Insight</AlertDialogTitle>
+									<AlertDialogDescription>
+										Are you sure you want to delete this insight? This action
+										cannot be undone.
+									</AlertDialogDescription>
+								</AlertDialogHeader>
+								<AlertDialogFooter>
+									<AlertDialogCancel>Cancel</AlertDialogCancel>
+									<AlertDialogAction
+										onClick={onDelete}
+										disabled={isDeleting}
+										className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
+									>
+										{isDeleting ? 'Deleting...' : 'Delete'}
+									</AlertDialogAction>
+								</AlertDialogFooter>
+							</AlertDialogContent>
+						</AlertDialog>
+					)}
+				</div>
 
 				<CollapsibleContent className='transition-all duration-200 ease-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0'>
 					<div className='border-t px-4 py-4'>

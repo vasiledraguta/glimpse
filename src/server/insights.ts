@@ -213,6 +213,28 @@ export const getInsightsCount = createServerFn({ method: 'GET' }).handler(
 	},
 );
 
+export const deleteInsight = createServerFn({ method: 'POST' })
+	.inputValidator((data: { id: string }) =>
+		z.object({ id: z.string().uuid() }).parse(data),
+	)
+	.handler(async ({ data }) => {
+		// Get the scrape result ID from the insight
+		const insightResult = await db
+			.select({ scrapeResultId: insights.scrapeResultId })
+			.from(insights)
+			.where(eq(insights.id, data.id));
+
+		await db.delete(insights).where(eq(insights.id, data.id));
+
+		if (insightResult.length > 0) {
+			await db
+				.delete(scrapeResults)
+				.where(eq(scrapeResults.id, insightResult[0].scrapeResultId));
+		}
+
+		return { success: true };
+	});
+
 export const getProcessingStatus = createServerFn({ method: 'GET' }).handler(
 	async () => {
 		const [latestBatch] = await db

@@ -4,7 +4,7 @@ import {
 	useNavigate,
 	useSearch,
 } from '@tanstack/react-router';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { IconBrain } from '@tabler/icons-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,7 +12,7 @@ import TabNavigation from '@/components/tab-navigation';
 import { InsightsTable } from '@/components/insights-table';
 import InsightsFilters from '@/components/insights-filters';
 import { CATEGORY_LABELS } from '@/lib/ui-constants';
-import { getInsights } from '@/server/insights';
+import { deleteInsight, getInsights } from '@/server/insights';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -39,6 +39,7 @@ export const Route = createFileRoute('/insights')({
 });
 
 function InsightsPage() {
+	const queryClient = useQueryClient();
 	const navigate = useNavigate();
 	const { page, category, opportunityType, minConfidence } = useSearch({
 		from: '/insights',
@@ -68,6 +69,14 @@ function InsightsPage() {
 					minConfidence: currentConfidence / 100,
 				},
 			}),
+	});
+
+	const deleteMutation = useMutation({
+		mutationFn: (data: { id: string }) => deleteInsight({ data }),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['insights'] });
+			queryClient.invalidateQueries({ queryKey: ['insightsCount'] });
+		},
 	});
 
 	const hasNextPage = insights.length === ITEMS_PER_PAGE;
@@ -179,7 +188,11 @@ function InsightsPage() {
 						</CardContent>
 					</Card>
 				) : (
-					<InsightsTable insights={insights} />
+					<InsightsTable
+						insights={insights}
+						onDelete={(id) => deleteMutation.mutate({ id })}
+						isDeleting={deleteMutation.isPending}
+					/>
 				)}
 
 				{/* Pagination */}
