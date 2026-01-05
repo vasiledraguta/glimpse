@@ -9,7 +9,6 @@ import { TanStackDevtools } from '@tanstack/react-devtools';
 import { QueryClientProvider } from '@tanstack/react-query';
 import appCss from '../styles.css?url';
 import type { QueryClient } from '@tanstack/react-query';
-import Header from '@/components/header';
 import { ThemeProvider } from '@/components/theme-provider';
 
 export interface RouterContext {
@@ -76,7 +75,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 			</head>
 			<body className='min-h-screen bg-background'>
 				<ThemeProvider defaultTheme='system' storageKey='glimpse-theme'>
-					<Header />
 					{children}
 				</ThemeProvider>
 				<TanStackDevtools
