@@ -71,7 +71,6 @@ function SourcesPage() {
 			<TabNavigation />
 
 			<div className='mt-6 space-y-6'>
-				{/* Page Header */}
 				<div className='flex items-center justify-between'>
 					<div>
 						<h2 className='text-2xl font-bold'>Sources</h2>
@@ -88,7 +87,6 @@ function SourcesPage() {
 					</Button>
 				</div>
 
-				{/* Create Form (Collapsible) */}
 				<Collapsible open={isCreating} onOpenChange={setIsCreating}>
 					<CollapsibleContent>
 						<CreateSourceForm
@@ -99,7 +97,6 @@ function SourcesPage() {
 					</CollapsibleContent>
 				</Collapsible>
 
-				{/* Sources List */}
 				{isLoading ? (
 					<div className='py-8 text-center text-muted-foreground'>
 						Loading sources...

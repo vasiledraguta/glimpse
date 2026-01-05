@@ -80,23 +80,18 @@ const SourceRow = ({
 
 	return (
 		<div className='grid w-full grid-cols-[auto_1fr_8rem_1fr_6rem_auto_auto] items-center gap-4 rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50'>
-			{/* Icon */}
 			<div className='shrink-0 text-muted-foreground'>{sourceIcon}</div>
 
-			{/* Name */}
 			<span className='min-w-0 truncate font-medium'>{source.name}</span>
 
-			{/* Source Type */}
 			<span className='shrink-0 text-sm text-muted-foreground'>
 				{sourceLabel}
 			</span>
 
-			{/* Config Display */}
 			<span className='min-w-0 truncate text-sm text-muted-foreground'>
 				{configDisplay}
 			</span>
 
-			{/* Last Scraped Date */}
 			{formattedDate ? (
 				<span className='shrink-0 text-xs text-muted-foreground'>
 					Last: {formattedDate}
@@ -105,7 +100,6 @@ const SourceRow = ({
 				<span className='shrink-0 text-xs text-muted-foreground'>—</span>
 			)}
 
-			{/* Toggle Button */}
 			<Button
 				variant='ghost'
 				size='icon-sm'
@@ -121,7 +115,6 @@ const SourceRow = ({
 				)}
 			</Button>
 
-			{/* Delete Button */}
 			<AlertDialog>
 				<AlertDialogTrigger>
 					<Button

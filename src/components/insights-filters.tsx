@@ -41,7 +41,6 @@ const InsightsFilters = ({
 				<span className='text-sm font-medium'>Filters</span>
 			</div>
 
-			{/* Category Filter */}
 			<Select
 				value={category || 'all'}
 				onValueChange={(value) =>
@@ -66,7 +65,6 @@ const InsightsFilters = ({
 				</SelectContent>
 			</Select>
 
-			{/* Opportunity Type Filter */}
 			<Select
 				value={opportunityType || 'all'}
 				onValueChange={(value) =>
@@ -92,7 +90,6 @@ const InsightsFilters = ({
 				</SelectContent>
 			</Select>
 
-			{/* Confidence Slider */}
 			<div className='flex items-center gap-2'>
 				<span className='text-xs text-muted-foreground'>Min confidence:</span>
 				<Slider
@@ -111,7 +108,6 @@ const InsightsFilters = ({
 				</span>
 			</div>
 
-			{/* Clear Filters */}
 			{hasActiveFilters && (
 				<Button
 					variant='ghost'

@@ -121,7 +121,6 @@ function InsightsPage() {
 			<TabNavigation />
 
 			<div className='mt-6 space-y-6'>
-				{/* Page Header */}
 				<div>
 					<h2 className='text-2xl font-bold'>Insights</h2>
 					<p className='text-sm text-muted-foreground'>
@@ -129,7 +128,6 @@ function InsightsPage() {
 					</p>
 				</div>
 
-				{/* Filters */}
 				<InsightsFilters
 					category={category}
 					opportunityType={opportunityType}
@@ -148,7 +146,6 @@ function InsightsPage() {
 					onClearFilters={clearFilters}
 				/>
 
-				{/* Results Info */}
 				{!isLoading && insights.length > 0 && (
 					<div className='text-sm text-muted-foreground'>
 						Showing {offset + 1}-{offset + insights.length} insights
@@ -156,7 +153,6 @@ function InsightsPage() {
 					</div>
 				)}
 
-				{/* Insights Table */}
 				{isLoading ? (
 					<InsightsTable insights={[]} isLoading />
 				) : insights.length === 0 ? (
@@ -195,7 +191,6 @@ function InsightsPage() {
 					/>
 				)}
 
-				{/* Pagination */}
 				{!isLoading && insights.length > 0 && (
 					<div className='flex items-center justify-between'>
 						<p className='text-sm text-muted-foreground'>

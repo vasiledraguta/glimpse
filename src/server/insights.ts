@@ -218,7 +218,6 @@ export const deleteInsight = createServerFn({ method: 'POST' })
 		z.object({ id: z.string().uuid() }).parse(data),
 	)
 	.handler(async ({ data }) => {
-		// Get the scrape result ID from the insight
 		const insightResult = await db
 			.select({ scrapeResultId: insights.scrapeResultId })
 			.from(insights)

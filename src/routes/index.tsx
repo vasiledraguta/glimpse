@@ -80,7 +80,6 @@ function Dashboard() {
 			<TabNavigation />
 
 			<div className='mt-6 space-y-8'>
-				{/* Stats Overview */}
 				<div className='grid gap-4 sm:grid-cols-3'>
 					<StatsCard
 						label='Active Sources'
@@ -117,7 +116,6 @@ function Dashboard() {
 					/>
 				</div>
 
-				{/* Action Center */}
 				<section>
 					<h2 className='mb-4 text-lg font-semibold'>Pipeline</h2>
 					<div className='grid gap-4 md:grid-cols-2'>
@@ -184,7 +182,6 @@ function Dashboard() {
 					</div>
 				</section>
 
-				{/* Recent Insights Preview */}
 				<section>
 					<div className='mb-4 flex items-center justify-between'>
 						<h2 className='text-lg font-semibold'>Recent Insights</h2>

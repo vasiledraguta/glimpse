@@ -90,45 +90,36 @@ const InsightRow = ({
 					isExpanded && 'ring-1 ring-primary/20',
 				)}
 			>
-				{/* Collapsed Row */}
 				<div className='grid w-full grid-cols-[6rem_1fr_3.5rem_8rem_4rem_auto_auto] items-center gap-4 p-4'>
-					<CollapsibleTrigger className='col-span-6 grid grid-cols-subgrid items-center gap-4 text-left hover:bg-muted/50'>
-						{/* Category */}
-						<Badge
-							className={cn('w-24 shrink-0 justify-center', categoryColor)}
-						>
-							{insight.category.replace('_', ' ')}
-						</Badge>
+					<Badge className={cn('w-24 shrink-0 justify-center', categoryColor)}>
+						{insight.category.replace('_', ' ')}
+					</Badge>
 
-						{/* Summary */}
-						<p className='min-w-0 truncate text-sm'>{insight.summary}</p>
+					<p className='min-w-0 truncate text-sm'>{insight.summary}</p>
 
-						{/* Confidence */}
-						<span
-							className={cn(
-								'text-xs font-medium tabular-nums text-right',
-								insight.confidence >= 0.8
-									? 'text-emerald-600 dark:text-emerald-400'
-									: insight.confidence >= 0.6
-										? 'text-amber-600 dark:text-amber-400'
-										: 'text-muted-foreground',
-							)}
-						>
-							{Math.round(insight.confidence * 100)}%
-						</span>
+					<span
+						className={cn(
+							'text-xs font-medium tabular-nums text-right',
+							insight.confidence >= 0.8
+								? 'text-emerald-600 dark:text-emerald-400'
+								: insight.confidence >= 0.6
+									? 'text-amber-600 dark:text-amber-400'
+									: 'text-muted-foreground',
+						)}
+					>
+						{Math.round(insight.confidence * 100)}%
+					</span>
 
-						{/* Source */}
-						<span className='flex shrink-0 items-center gap-1 text-xs text-muted-foreground'>
-							{sourceIcon}
-							<span className='hidden sm:inline'>{source.name}</span>
-						</span>
+					<span className='flex shrink-0 items-center gap-1 text-xs text-muted-foreground'>
+						{sourceIcon}
+						<span className='hidden sm:inline'>{source.name}</span>
+					</span>
 
-						{/* Date */}
-						<span className='shrink-0 text-xs text-muted-foreground'>
-							{formattedDate}
-						</span>
+					<span className='shrink-0 text-xs text-muted-foreground'>
+						{formattedDate}
+					</span>
 
-						{/* Expand Icon */}
+					<CollapsibleTrigger className='flex size-6 cursor-pointer items-center justify-center rounded transition-colors duration-200 ease hover:bg-muted'>
 						<IconChevronDown
 							className={cn(
 								'size-4 text-muted-foreground transition-transform duration-200 ease-out',
@@ -137,7 +128,6 @@ const InsightRow = ({
 						/>
 					</CollapsibleTrigger>
 
-					{/* Delete Button */}
 					{onDelete && (
 						<AlertDialog>
 							<AlertDialogTrigger>
@@ -175,9 +165,7 @@ const InsightRow = ({
 				<CollapsibleContent className='transition-all duration-200 ease-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0'>
 					<div className='border-t px-4 py-4'>
 						<div className='grid gap-4 sm:grid-cols-2'>
-							{/* Left Column */}
 							<div className='space-y-4'>
-								{/* Full Summary */}
 								<div>
 									<h4 className='mb-1 text-xs font-medium uppercase text-muted-foreground'>
 										Summary
@@ -185,7 +173,6 @@ const InsightRow = ({
 									<p className='text-sm'>{insight.summary}</p>
 								</div>
 
-								{/* Product Idea */}
 								{insight.productIdea && (
 									<div className='rounded-md bg-primary/5 p-3'>
 										<div className='mb-1 flex items-center gap-1 text-xs font-medium text-primary'>
@@ -196,7 +183,6 @@ const InsightRow = ({
 									</div>
 								)}
 
-								{/* Original Source */}
 								{scrapeResult.title && (
 									<div>
 										<h4 className='mb-1 text-xs font-medium uppercase text-muted-foreground'>
@@ -208,7 +194,6 @@ const InsightRow = ({
 									</div>
 								)}
 
-								{/* Tags */}
 								{insight.tags && insight.tags.length > 0 && (
 									<div className='flex flex-wrap gap-1'>
 										{insight.tags.map((tag) => (
@@ -220,9 +205,7 @@ const InsightRow = ({
 								)}
 							</div>
 
-							{/* Right Column */}
 							<div className='space-y-4'>
-								{/* Opportunity Type */}
 								{opportunityLabel && (
 									<div>
 										<h4 className='mb-1 text-xs font-medium uppercase text-muted-foreground'>
@@ -234,7 +217,6 @@ const InsightRow = ({
 									</div>
 								)}
 
-								{/* Target Customer */}
 								{insight.targetCustomer && (
 									<div>
 										<h4 className='mb-1 text-xs font-medium uppercase text-muted-foreground'>
@@ -244,7 +226,6 @@ const InsightRow = ({
 									</div>
 								)}
 
-								{/* Competitors */}
 								{insight.competitorsMentioned &&
 									insight.competitorsMentioned.length > 0 && (
 										<div>
@@ -257,7 +238,6 @@ const InsightRow = ({
 										</div>
 									)}
 
-								{/* Market Signal */}
 								{insight.marketSignal !== null && (
 									<div>
 										<h4 className='mb-1 text-xs font-medium uppercase text-muted-foreground'>
@@ -279,7 +259,6 @@ const InsightRow = ({
 									</div>
 								)}
 
-								{/* Source Link */}
 								{scrapeResult.url && (
 									<div>
 										<a

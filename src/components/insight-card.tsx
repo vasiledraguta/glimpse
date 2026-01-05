@@ -48,7 +48,6 @@ const InsightCard = ({ insight, scrapeResult, source }: InsightCardProps) => {
 				</div>
 			</CardHeader>
 			<CardContent className='space-y-3'>
-				{/* Original Title & Source Link */}
 				<div className='flex items-start justify-between gap-2'>
 					{scrapeResult.title ? (
 						<p className='text-sm font-medium'>{scrapeResult.title}</p>
@@ -68,10 +67,8 @@ const InsightCard = ({ insight, scrapeResult, source }: InsightCardProps) => {
 					)}
 				</div>
 
-				{/* Summary */}
 				<p className='text-sm text-muted-foreground'>{insight.summary}</p>
 
-				{/* Product Idea */}
 				{insight.productIdea && (
 					<div className='rounded-md bg-muted p-3'>
 						<p className='text-xs font-medium text-muted-foreground'>
@@ -81,7 +78,6 @@ const InsightCard = ({ insight, scrapeResult, source }: InsightCardProps) => {
 					</div>
 				)}
 
-				{/* Tags & Metadata */}
 				<div className='flex flex-wrap items-center justify-between gap-2 pt-2'>
 					{insight.tags && insight.tags.length > 0 && (
 						<div className='flex flex-wrap gap-1'>
