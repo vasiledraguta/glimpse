@@ -7,11 +7,7 @@ import {
 	IconNews,
 	IconPlus,
 	IconRocket,
-	IconToggleLeft,
-	IconToggleRight,
-	IconTrash,
 } from '@tabler/icons-react';
-import type { Source, SourceConfig } from '@/db';
 import type { SourceType } from '@/lib/ui-constants';
 import {
 	createSource,
@@ -21,7 +17,6 @@ import {
 } from '@/server/sources';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -32,19 +27,9 @@ import {
 	SelectValue,
 } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-	AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
 import TabNavigation from '@/components/tab-navigation';
-import { SOURCE_TYPE_ICONS, SOURCE_TYPE_LABELS } from '@/lib/ui-constants';
+import SourceRow from '@/components/source-row';
+import { SOURCE_TYPE_LABELS } from '@/lib/ui-constants';
 
 export const Route = createFileRoute('/sources')({ component: SourcesPage });
 
@@ -129,7 +114,7 @@ function SourcesPage() {
 				) : (
 					<div className='space-y-2'>
 						{sources.map((source) => (
-							<SourceCard
+							<SourceRow
 								key={source.id}
 								source={source}
 								onToggle={() => toggleMutation.mutate({ id: source.id })}
@@ -144,133 +129,6 @@ function SourcesPage() {
 		</main>
 	);
 }
-
-const SourceCard = ({
-	source,
-	onToggle,
-	onDelete,
-	isToggling,
-	isDeleting,
-}: {
-	source: Source;
-	onToggle: () => void;
-	onDelete: () => void;
-	isToggling: boolean;
-	isDeleting: boolean;
-}) => {
-	const config = source.config;
-	const configDisplay = getConfigDisplay(source.type, config);
-	const sourceIcon = SOURCE_TYPE_ICONS[source.type as SourceType];
-
-	return (
-		<div className='flex items-center justify-between gap-4 rounded-lg border bg-card p-4'>
-			<div className='flex items-center gap-3'>
-				<div className='text-muted-foreground'>{sourceIcon}</div>
-				<div>
-					<div className='flex items-center gap-2'>
-						<span className='font-medium'>{source.name}</span>
-						<Badge
-							variant={source.enabled ? 'default' : 'outline'}
-							className='text-xs'
-						>
-							{source.enabled ? 'On' : 'Off'}
-						</Badge>
-					</div>
-					<div className='flex items-center gap-2 text-xs text-muted-foreground'>
-						<span>{SOURCE_TYPE_LABELS[source.type as SourceType]}</span>
-						<span>·</span>
-						<span>{configDisplay}</span>
-						{source.lastScrapedAt && (
-							<>
-								<span>·</span>
-								<span>
-									Last: {new Date(source.lastScrapedAt).toLocaleDateString()}
-								</span>
-							</>
-						)}
-					</div>
-				</div>
-			</div>
-			<div className='flex items-center gap-1'>
-				<Button
-					variant='ghost'
-					size='icon-sm'
-					onClick={onToggle}
-					disabled={isToggling}
-					title={source.enabled ? 'Disable source' : 'Enable source'}
-					className='cursor-pointer'
-				>
-					{source.enabled ? (
-						<IconToggleRight className='size-5 text-primary' />
-					) : (
-						<IconToggleLeft className='size-5' />
-					)}
-				</Button>
-				<AlertDialog>
-					<AlertDialogTrigger>
-						<Button
-							variant='ghost'
-							size='icon-sm'
-							className='cursor-pointer text-destructive hover:text-destructive'
-						>
-							<IconTrash className='size-4' />
-						</Button>
-					</AlertDialogTrigger>
-					<AlertDialogContent>
-						<AlertDialogHeader>
-							<AlertDialogTitle>Delete Source</AlertDialogTitle>
-							<AlertDialogDescription>
-								Are you sure you want to delete &quot;{source.name}&quot;? This
-								action cannot be undone.
-							</AlertDialogDescription>
-						</AlertDialogHeader>
-						<AlertDialogFooter>
-							<AlertDialogCancel>Cancel</AlertDialogCancel>
-							<AlertDialogAction
-								onClick={onDelete}
-								disabled={isDeleting}
-								className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
-							>
-								Delete
-							</AlertDialogAction>
-						</AlertDialogFooter>
-					</AlertDialogContent>
-				</AlertDialog>
-			</div>
-		</div>
-	);
-};
-
-const getConfigDisplay = (type: string, config: SourceConfig): string => {
-	switch (type) {
-		case 'reddit':
-			return `Subreddit: r/${(config as { subreddit: string }).subreddit}`;
-		case 'hackernews': {
-			const hnConfig = config as {
-				includeAskHN: boolean;
-				includeShowHN: boolean;
-				includeJobs: boolean;
-			};
-			const types = [];
-			if (hnConfig.includeAskHN) types.push('Ask HN');
-			if (hnConfig.includeShowHN) types.push('Show HN');
-			if (hnConfig.includeJobs) types.push('Jobs');
-			return types.length > 0 ? `Types: ${types.join(', ')}` : 'All types';
-		}
-		case 'producthunt': {
-			const phConfig = config as {
-				includeLaunches: boolean;
-				includeDiscussions: boolean;
-			};
-			const types = [];
-			if (phConfig.includeLaunches) types.push('Launches');
-			if (phConfig.includeDiscussions) types.push('Discussions');
-			return types.length > 0 ? `Types: ${types.join(', ')}` : 'All types';
-		}
-		default:
-			return JSON.stringify(config);
-	}
-};
 
 type CreateSourceData = {
 	type: SourceType;

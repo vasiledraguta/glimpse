@@ -100,7 +100,9 @@ const InsightRow = ({ insight, scrapeResult, source }: InsightRowProps) => {
 					</span>
 
 					{/* Date */}
-					<span className='shrink-0 text-xs text-muted-foreground'>{formattedDate}</span>
+					<span className='shrink-0 text-xs text-muted-foreground'>
+						{formattedDate}
+					</span>
 
 					{/* Expand Icon */}
 					<IconChevronDown

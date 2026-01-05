@@ -18,6 +18,7 @@ import ActionCard from '@/components/action-card';
 import InsightPreviewCard from '@/components/insight-preview-card';
 import {
 	getInsights,
+	getInsightsCount,
 	getProcessingStatus,
 	processWithAI,
 } from '@/server/insights';
@@ -32,6 +33,11 @@ function Dashboard() {
 	const { data: insights = [], isLoading: insightsLoading } = useQuery({
 		queryKey: ['insights', { limit: 5 }],
 		queryFn: () => getInsights({ data: { limit: 5, offset: 0 } }),
+	});
+
+	const { data: insightsCount = 0 } = useQuery({
+		queryKey: ['insightsCount'],
+		queryFn: () => getInsightsCount(),
 	});
 
 	const { data: sources = [] } = useQuery({
@@ -61,6 +67,7 @@ function Dashboard() {
 		mutationFn: () => processWithAI(),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['insights'] });
+			queryClient.invalidateQueries({ queryKey: ['insightsCount'] });
 			queryClient.invalidateQueries({ queryKey: ['processingStatus'] });
 		},
 	});
@@ -98,7 +105,7 @@ function Dashboard() {
 					/>
 					<StatsCard
 						label='Total Insights'
-						value={`${insights.length}+`}
+						value={`${insightsCount}`}
 						icon={<IconBulb className='size-5 text-muted-foreground' />}
 						action={
 							<Link to='/insights'>

@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start';
-import { and, desc, eq, gte, inArray, isNull } from 'drizzle-orm';
+import { and, count, desc, eq, gte, inArray, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, insights, processingBatches, scrapeResults, sources } from '@/db';
 import { extractInsights } from '@/lib/ai';
@@ -202,6 +202,14 @@ export const processWithAI = createServerFn({ method: 'POST' }).handler(
 
 			throw error;
 		}
+	},
+);
+
+export const getInsightsCount = createServerFn({ method: 'GET' }).handler(
+	async () => {
+		const [result] = await db.select({ count: count() }).from(insights);
+
+		return result.count;
 	},
 );
 
