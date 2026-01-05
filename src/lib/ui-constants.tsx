@@ -46,3 +46,31 @@ export const CATEGORIES = [
 	{ value: 'idea', label: 'Ideas' },
 	{ value: 'other', label: 'Other' },
 ] as const;
+
+export const OPPORTUNITY_TYPE_COLORS: Record<string, string> = {
+	gap: 'bg-purple-50 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300',
+	improvement:
+		'bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300',
+	workflow: 'bg-teal-50 text-teal-700 dark:bg-teal-950/50 dark:text-teal-300',
+	pricing:
+		'bg-orange-50 text-orange-700 dark:bg-orange-950/50 dark:text-orange-300',
+	integration:
+		'bg-pink-50 text-pink-700 dark:bg-pink-950/50 dark:text-pink-300',
+};
+
+export const OPPORTUNITY_TYPE_LABELS: Record<string, string> = {
+	gap: 'Market Gap',
+	improvement: 'Improvement',
+	workflow: 'Workflow',
+	pricing: 'Pricing',
+	integration: 'Integration',
+};
+
+export const OPPORTUNITY_TYPES = [
+	{ value: 'all', label: 'All Opportunities' },
+	{ value: 'gap', label: 'Market Gaps' },
+	{ value: 'improvement', label: 'Improvements' },
+	{ value: 'workflow', label: 'Workflow' },
+	{ value: 'pricing', label: 'Pricing' },
+	{ value: 'integration', label: 'Integration' },
+] as const;

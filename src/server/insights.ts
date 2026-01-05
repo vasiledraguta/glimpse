@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/react-start';
-import { desc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { db, insights, processingBatches, scrapeResults, sources } from '@/db';
 import { extractInsights } from '@/lib/ai';
@@ -15,6 +15,7 @@ export const getInsights = createServerFn({ method: 'GET' })
 			limit?: number;
 			offset?: number;
 			category?: string;
+			opportunityType?: string;
 			minConfidence?: number;
 		}) =>
 			z
@@ -30,7 +31,10 @@ export const getInsights = createServerFn({ method: 'GET' })
 							'other',
 						])
 						.optional(),
-					minConfidence: z.number().min(0).max(1).default(0.5),
+					opportunityType: z
+						.enum(['gap', 'improvement', 'workflow', 'pricing', 'integration'])
+						.optional(),
+					minConfidence: z.number().min(0).max(1).default(0),
 				})
 				.parse(data),
 	)
@@ -39,6 +43,14 @@ export const getInsights = createServerFn({ method: 'GET' })
 
 		if (data.category) {
 			conditions.push(eq(insights.category, data.category));
+		}
+
+		if (data.opportunityType) {
+			conditions.push(eq(insights.opportunityType, data.opportunityType));
+		}
+
+		if (data.minConfidence > 0) {
+			conditions.push(gte(insights.confidence, data.minConfidence));
 		}
 
 		const allInsights = await db
@@ -50,6 +62,7 @@ export const getInsights = createServerFn({ method: 'GET' })
 			.from(insights)
 			.innerJoin(scrapeResults, eq(insights.scrapeResultId, scrapeResults.id))
 			.innerJoin(sources, eq(scrapeResults.sourceId, sources.id))
+			.where(conditions.length > 0 ? and(...conditions) : undefined)
 			.orderBy(desc(insights.createdAt))
 			.limit(data.limit)
 			.offset(data.offset);
