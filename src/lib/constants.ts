@@ -194,7 +194,7 @@ export const SCRAPE_CONFIG = {
 };
 
 export const AI_CONFIG = {
-	batchSize: 20,
+	batchSize: 10,
 	minConfidence: 0.5,
 	minMarketSignal: 0.6,
 };
