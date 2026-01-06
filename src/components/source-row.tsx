@@ -1,8 +1,4 @@
-import {
-	IconToggleLeft,
-	IconToggleRight,
-	IconTrash,
-} from '@tabler/icons-react';
+import { IconX } from '@tabler/icons-react';
 import type { Source, SourceConfig } from '@/db';
 import type { SourceType } from '@/lib/ui-constants';
 import { SOURCE_TYPE_ICONS, SOURCE_TYPE_LABELS } from '@/lib/ui-constants';
@@ -18,6 +14,7 @@ import {
 	AlertDialogTitle,
 	AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { cn } from '@/lib/utils';
 
 interface SourceRowProps {
 	source: Source;
@@ -100,20 +97,22 @@ const SourceRow = ({
 				<span className='shrink-0 text-xs text-muted-foreground'>—</span>
 			)}
 
-			<Button
-				variant='ghost'
-				size='icon-sm'
+			<button
 				onClick={onToggle}
 				disabled={isToggling}
 				title={source.enabled ? 'Disable source' : 'Enable source'}
-				className='shrink-0 cursor-pointer'
-			>
-				{source.enabled ? (
-					<IconToggleRight className='size-5 text-primary' />
-				) : (
-					<IconToggleLeft className='size-5' />
+				className={cn(
+					'relative h-5 w-9 shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-out disabled:cursor-not-allowed disabled:opacity-50',
+					source.enabled ? 'bg-primary' : 'bg-muted-foreground/30',
 				)}
-			</Button>
+			>
+				<span
+					className={cn(
+						'absolute top-0.5 left-0.5 size-4 rounded-full bg-white shadow-sm transition-transform duration-200 ease-out',
+						source.enabled && 'translate-x-4',
+					)}
+				/>
+			</button>
 
 			<AlertDialog>
 				<AlertDialogTrigger>
@@ -122,7 +121,7 @@ const SourceRow = ({
 						size='icon-sm'
 						className='shrink-0 cursor-pointer text-destructive hover:text-destructive'
 					>
-						<IconTrash className='size-4' />
+						<IconX className='size-4' />
 					</Button>
 				</AlertDialogTrigger>
 				<AlertDialogContent>

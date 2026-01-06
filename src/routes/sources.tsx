@@ -116,8 +116,14 @@ function SourcesPage() {
 								source={source}
 								onToggle={() => toggleMutation.mutate({ id: source.id })}
 								onDelete={() => deleteMutation.mutate({ id: source.id })}
-								isToggling={toggleMutation.isPending}
-								isDeleting={deleteMutation.isPending}
+								isToggling={
+									toggleMutation.isPending &&
+									toggleMutation.variables.id === source.id
+								}
+								isDeleting={
+									deleteMutation.isPending &&
+									deleteMutation.variables.id === source.id
+								}
 							/>
 						))}
 					</div>

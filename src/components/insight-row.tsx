@@ -119,10 +119,10 @@ const InsightRow = ({
 						{formattedDate}
 					</span>
 
-					<CollapsibleTrigger className='flex size-6 cursor-pointer items-center justify-center rounded transition-colors duration-200 ease hover:bg-muted'>
+					<CollapsibleTrigger className='flex size-8 cursor-pointer items-center justify-center rounded-[min(var(--radius-md),10px)] transition-colors duration-200 ease hover:bg-muted'>
 						<IconChevronDown
 							className={cn(
-								'size-4 text-muted-foreground transition-transform duration-200 ease-out',
+								'size-4 text-muted-foreground transition-transform duration-200 ease-out ',
 								isExpanded && 'rotate-180',
 							)}
 						/>
