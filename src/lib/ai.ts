@@ -6,7 +6,9 @@ const google = createGoogleGenerativeAI({
 	apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
 });
 
-export const model = google('gemini-3-flash-preview');
+export const model = google(
+	process.env.GEMINI_MODEL ?? 'gemini-2.5-flash',
+);
 
 export const insightSchema = z.object({
 	category: z.enum([
