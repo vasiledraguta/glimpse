@@ -16,7 +16,7 @@ bun run dev
 | Variable | Description |
 |----------|-------------|
 | `DATABASE_URL` | PostgreSQL (Neon) connection string |
-| `GOOGLE_GENERATIVE_AI_API_KEY` | Gemini API key |
+| `OPENAI_API_KEY` | OpenAI API key |
 | `PRODUCTHUNT_API_KEY` | Product Hunt API key |
 | `PRODUCTHUNT_API_SECRET` | Product Hunt API secret |
 

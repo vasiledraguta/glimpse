@@ -1,14 +1,12 @@
-import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { createOpenAI } from '@ai-sdk/openai';
 import { Output, generateText } from 'ai';
 import { z } from 'zod';
 
-const google = createGoogleGenerativeAI({
-	apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY,
+const openai = createOpenAI({
+	apiKey: process.env.OPENAI_API_KEY,
 });
 
-export const model = google(
-	process.env.GEMINI_MODEL ?? 'gemini-2.5-flash',
-);
+export const model = openai(process.env.OPENAI_MODEL ?? 'gpt-4.1-mini');
 
 export const insightSchema = z.object({
 	category: z.enum([
