@@ -13,13 +13,8 @@ import {
 	stripHtml,
 } from '../scraper-utils';
 import type { KeywordTier } from '../scraper-utils';
+import type { HackerNewsConfig } from '../domain';
 import type { NewScrapeResult } from '@/db';
-
-let aborted = false;
-
-export function setHackerNewsAborted(value: boolean): void {
-	aborted = value;
-}
 
 interface AlgoliaHit {
 	objectID: string;
@@ -104,14 +99,10 @@ async function searchAlgolia(
 	return data.hits;
 }
 
-interface HackerNewsConfig {
-	includeAskHN: boolean;
-	includeShowHN: boolean;
-}
-
 export async function scrapeHackerNews(
 	sourceId: string,
 	config: HackerNewsConfig,
+	signal?: AbortSignal,
 ): Promise<Array<NewScrapeResult>> {
 	const startTime = Date.now();
 	console.log('[HN] Starting scrape...');
@@ -125,7 +116,7 @@ export async function scrapeHackerNews(
 
 	const batchSize = 5;
 	for (let i = 0; i < queries.length; i += batchSize) {
-		if (aborted) {
+		if (signal?.aborted) {
 			console.log('[HN] Scraping aborted');
 			break;
 		}

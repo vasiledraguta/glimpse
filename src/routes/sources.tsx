@@ -8,7 +8,8 @@ import {
 	IconPlus,
 	IconRocket,
 } from '@tabler/icons-react';
-import type { SourceType } from '@/lib/ui-constants';
+import type { SourceType } from '@/lib/domain';
+import type { CreateSourceInput } from '@/server/sources';
 import {
 	createSource,
 	deleteSource,
@@ -43,7 +44,7 @@ function SourcesPage() {
 	});
 
 	const createMutation = useMutation({
-		mutationFn: (data: CreateSourceData) => createSource({ data }),
+		mutationFn: (data: CreateSourceInput) => createSource({ data }),
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ['sources'] });
 			setIsCreating(false);
@@ -133,20 +134,13 @@ function SourcesPage() {
 	);
 }
 
-type CreateSourceData = {
-	type: SourceType;
-	name: string;
-	config: Record<string, unknown>;
-	enabled?: boolean;
-};
-
 const CreateSourceForm = ({
 	onCancel,
 	onSubmit,
 	isSubmitting,
 }: {
 	onCancel: () => void;
-	onSubmit: (data: CreateSourceData) => void;
+	onSubmit: (data: CreateSourceInput) => void;
 	isSubmitting: boolean;
 }) => {
 	const [type, setType] = useState<SourceType | ''>('');
@@ -165,20 +159,25 @@ const CreateSourceForm = ({
 		e.preventDefault();
 		if (!type || !name) return;
 
-		let config: Record<string, unknown>;
 		switch (type) {
 			case 'reddit':
-				config = { subreddit: subreddit.replace(/^r\//, '') };
+				onSubmit({ type, name, config: { subreddit } });
 				break;
 			case 'hackernews':
-				config = { includeAskHN, includeShowHN, includeJobs };
+				onSubmit({
+					type,
+					name,
+					config: { includeAskHN, includeShowHN, includeJobs },
+				});
 				break;
 			case 'producthunt':
-				config = { includeLaunches, includeDiscussions };
+				onSubmit({
+					type,
+					name,
+					config: { includeLaunches, includeDiscussions },
+				});
 				break;
 		}
-
-		onSubmit({ type, name, config, enabled: true });
 	};
 
 	const isValid = type && name && (type !== 'reddit' || subreddit);

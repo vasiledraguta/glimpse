@@ -39,7 +39,7 @@ async function fetchPostsViaRss(subreddit: string): Promise<Array<RedditPost>> {
 
 		return feed.items.map((item) => {
 			const idMatch = item.link?.match(/\/comments\/([a-z0-9]+)\//);
-			const id = idMatch ? idMatch[1] : item.guid || '';
+			const id = idMatch?.[1] ?? item.guid ?? '';
 
 			return {
 				id,
@@ -77,8 +77,7 @@ async function fetchPostWithComments(
 
 		const data = await response.json();
 		const postData = data[0]?.data?.children?.[0]?.data as
-			| RedditPost
-			| undefined;
+			RedditPost | undefined;
 		const commentsData = data[1]?.data?.children || [];
 
 		if (!postData) return null;
@@ -115,6 +114,7 @@ async function fetchPostWithComments(
 export async function scrapeSubreddit(
 	sourceId: string,
 	subreddit: string,
+	signal?: AbortSignal,
 ): Promise<Array<NewScrapeResult>> {
 	const results: Array<NewScrapeResult> = [];
 
@@ -130,6 +130,10 @@ export async function scrapeSubreddit(
 	console.log(`[reddit] ${potentiallyInteresting.length} posts match keywords`);
 
 	for (const post of potentiallyInteresting) {
+		if (signal?.aborted) {
+			console.log('[reddit] Scraping aborted');
+			break;
+		}
 		await sleep(RATE_LIMITS.reddit.delayMs);
 		const fullPost = await fetchPostWithComments(subreddit, post.id);
 		if (!fullPost) continue;

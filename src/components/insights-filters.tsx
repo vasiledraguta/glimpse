@@ -1,4 +1,5 @@
 import { IconFilter, IconX } from '@tabler/icons-react';
+import type { InsightCategory, OpportunityType } from '@/lib/domain';
 import { Button } from '@/components/ui/button';
 import {
 	Select,
@@ -8,17 +9,23 @@ import {
 	SelectValue,
 } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { CATEGORIES, OPPORTUNITY_TYPES } from '@/lib/ui-constants';
+import {
+	CATEGORY_FILTER_OPTIONS,
+	OPPORTUNITY_TYPE_FILTER_OPTIONS,
+} from '@/lib/ui-constants';
 
 interface InsightsFiltersProps {
-	category: string | undefined;
-	opportunityType: string | undefined;
+	category: InsightCategory | undefined;
+	opportunityType: OpportunityType | undefined;
 	minConfidence: number;
-	onCategoryChange: (value: string | undefined) => void;
-	onOpportunityTypeChange: (value: string | undefined) => void;
+	onCategoryChange: (value: InsightCategory | undefined) => void;
+	onOpportunityTypeChange: (value: OpportunityType | undefined) => void;
 	onConfidenceChange: (value: number) => void;
 	onClearFilters: () => void;
 }
+
+const fromSelectValue = <T extends string>(value: string | null) =>
+	value === 'all' || value === null ? undefined : (value as T);
 
 const InsightsFilters = ({
 	category,
@@ -42,22 +49,22 @@ const InsightsFilters = ({
 			</div>
 
 			<Select
-				value={category || 'all'}
+				value={category ?? 'all'}
 				onValueChange={(value) =>
-					onCategoryChange(
-						value === 'all' || value === null ? undefined : value,
-					)
+					onCategoryChange(fromSelectValue<InsightCategory>(value))
 				}
 			>
 				<SelectTrigger className='w-40'>
 					<SelectValue>
-						{category
-							? CATEGORIES.find((c) => c.value === category)?.label
-							: 'All Categories'}
+						{
+							CATEGORY_FILTER_OPTIONS.find(
+								(c) => c.value === (category ?? 'all'),
+							)?.label
+						}
 					</SelectValue>
 				</SelectTrigger>
 				<SelectContent>
-					{CATEGORIES.map((cat) => (
+					{CATEGORY_FILTER_OPTIONS.map((cat) => (
 						<SelectItem key={cat.value} value={cat.value}>
 							{cat.label}
 						</SelectItem>
@@ -66,23 +73,22 @@ const InsightsFilters = ({
 			</Select>
 
 			<Select
-				value={opportunityType || 'all'}
+				value={opportunityType ?? 'all'}
 				onValueChange={(value) =>
-					onOpportunityTypeChange(
-						value === 'all' || value === null ? undefined : value,
-					)
+					onOpportunityTypeChange(fromSelectValue<OpportunityType>(value))
 				}
 			>
 				<SelectTrigger className='w-40'>
 					<SelectValue>
-						{opportunityType
-							? OPPORTUNITY_TYPES.find((o) => o.value === opportunityType)
-									?.label
-							: 'All Opportunities'}
+						{
+							OPPORTUNITY_TYPE_FILTER_OPTIONS.find(
+								(o) => o.value === (opportunityType ?? 'all'),
+							)?.label
+						}
 					</SelectValue>
 				</SelectTrigger>
 				<SelectContent>
-					{OPPORTUNITY_TYPES.map((opp) => (
+					{OPPORTUNITY_TYPE_FILTER_OPTIONS.map((opp) => (
 						<SelectItem key={opp.value} value={opp.value}>
 							{opp.label}
 						</SelectItem>

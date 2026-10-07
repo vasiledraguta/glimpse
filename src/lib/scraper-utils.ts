@@ -25,10 +25,7 @@ export function matchesNegativeKeywords(text: string): boolean {
 
 export type KeywordTier = 1 | 2 | 3 | 4;
 export type KeywordCategory =
-	| 'high_intent'
-	| 'problem_seeking'
-	| 'frustration'
-	| 'feature_request';
+	'high_intent' | 'problem_seeking' | 'frustration' | 'feature_request';
 
 export interface TierInfo {
 	tier: KeywordTier;

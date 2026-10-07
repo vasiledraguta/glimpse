@@ -1,17 +1,12 @@
 import { IconBrandReddit, IconNews, IconRocket } from '@tabler/icons-react';
+import type { InsightCategory, OpportunityType, SourceType } from './domain';
 
-export type SourceType = 'reddit' | 'hackernews' | 'producthunt';
+export type { SourceType } from './domain';
 
 export const SOURCE_TYPE_ICONS: Record<SourceType, React.ReactNode> = {
 	reddit: <IconBrandReddit className='size-4' />,
 	hackernews: <IconNews className='size-4' />,
 	producthunt: <IconRocket className='size-4' />,
-};
-
-export const SOURCE_TYPE_ICONS_LG: Record<SourceType, React.ReactNode> = {
-	reddit: <IconBrandReddit className='size-5' />,
-	hackernews: <IconNews className='size-5' />,
-	producthunt: <IconRocket className='size-5' />,
 };
 
 export const SOURCE_TYPE_LABELS: Record<SourceType, string> = {
@@ -20,7 +15,7 @@ export const SOURCE_TYPE_LABELS: Record<SourceType, string> = {
 	producthunt: 'Product Hunt',
 };
 
-export const CATEGORY_COLORS: Record<string, string> = {
+export const CATEGORY_COLORS: Record<InsightCategory, string> = {
 	complaint: 'bg-red-50 text-red-700 dark:bg-red-950/50 dark:text-red-300',
 	feature_request:
 		'bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300',
@@ -30,7 +25,7 @@ export const CATEGORY_COLORS: Record<string, string> = {
 	other: 'bg-slate-50 text-slate-600 dark:bg-slate-800/50 dark:text-slate-300',
 };
 
-export const CATEGORY_LABELS: Record<string, string> = {
+export const CATEGORY_LABELS: Record<InsightCategory, string> = {
 	complaint: 'Complaint',
 	feature_request: 'Feature Request',
 	pain_point: 'Pain Point',
@@ -38,16 +33,19 @@ export const CATEGORY_LABELS: Record<string, string> = {
 	other: 'Other',
 };
 
-export const CATEGORIES = [
+export const CATEGORY_FILTER_OPTIONS: Array<{
+	value: InsightCategory | 'all';
+	label: string;
+}> = [
 	{ value: 'all', label: 'All Categories' },
 	{ value: 'complaint', label: 'Complaints' },
 	{ value: 'feature_request', label: 'Feature Requests' },
 	{ value: 'pain_point', label: 'Pain Points' },
 	{ value: 'idea', label: 'Ideas' },
 	{ value: 'other', label: 'Other' },
-] as const;
+];
 
-export const OPPORTUNITY_TYPE_COLORS: Record<string, string> = {
+export const OPPORTUNITY_TYPE_COLORS: Record<OpportunityType, string> = {
 	gap: 'bg-purple-50 text-purple-700 dark:bg-purple-950/50 dark:text-purple-300',
 	improvement:
 		'bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300',
@@ -58,7 +56,7 @@ export const OPPORTUNITY_TYPE_COLORS: Record<string, string> = {
 		'bg-pink-50 text-pink-700 dark:bg-pink-950/50 dark:text-pink-300',
 };
 
-export const OPPORTUNITY_TYPE_LABELS: Record<string, string> = {
+export const OPPORTUNITY_TYPE_LABELS: Record<OpportunityType, string> = {
 	gap: 'Market Gap',
 	improvement: 'Improvement',
 	workflow: 'Workflow',
@@ -66,11 +64,14 @@ export const OPPORTUNITY_TYPE_LABELS: Record<string, string> = {
 	integration: 'Integration',
 };
 
-export const OPPORTUNITY_TYPES = [
+export const OPPORTUNITY_TYPE_FILTER_OPTIONS: Array<{
+	value: OpportunityType | 'all';
+	label: string;
+}> = [
 	{ value: 'all', label: 'All Opportunities' },
 	{ value: 'gap', label: 'Market Gaps' },
 	{ value: 'improvement', label: 'Improvements' },
 	{ value: 'workflow', label: 'Workflow' },
 	{ value: 'pricing', label: 'Pricing' },
 	{ value: 'integration', label: 'Integration' },
-] as const;
+];

@@ -153,20 +153,6 @@ export const NEGATIVE_KEYWORDS = [
 	'launching today',
 ];
 
-export const PAIN_POINT_KEYWORDS = [
-	...HIGH_INTENT_KEYWORDS,
-	...PROBLEM_SEEKING_KEYWORDS,
-	...FRUSTRATION_KEYWORDS,
-	...FEATURE_REQUEST_KEYWORDS,
-];
-
-export const PAIN_POINT_KEYWORD_CATEGORIES: Record<string, Array<string>> = {
-	highIntent: HIGH_INTENT_KEYWORDS,
-	problemSeeking: PROBLEM_SEEKING_KEYWORDS,
-	frustration: FRUSTRATION_KEYWORDS,
-	features: FEATURE_REQUEST_KEYWORDS,
-};
-
 export const RATE_LIMITS = {
 	reddit: {
 		delayMs: 6000,

@@ -11,48 +11,38 @@ import {
 	uuid,
 	varchar,
 } from 'drizzle-orm/pg-core';
+import {
+	BATCH_STATUSES,
+	CONTENT_TYPES,
+	INSIGHT_CATEGORIES,
+	OPPORTUNITY_TYPES,
+	SOURCE_TYPES,
+} from '../lib/domain';
+import type { SourceConfig } from '../lib/domain';
+
+export type {
+	HackerNewsConfig,
+	ProductHuntConfig,
+	RedditConfig,
+	SourceConfig,
+} from '../lib/domain';
 
 // Enums
-export const sourceTypeEnum = pgEnum('source_type', [
-	'reddit',
-	'hackernews',
-	'producthunt',
-]);
+export const sourceTypeEnum = pgEnum('source_type', SOURCE_TYPES);
 
-export const contentTypeEnum = pgEnum('content_type', ['post', 'comment']);
+export const contentTypeEnum = pgEnum('content_type', CONTENT_TYPES);
 
-export const insightCategoryEnum = pgEnum('insight_category', [
-	'complaint',
-	'feature_request',
-	'pain_point',
-	'idea',
-	'other',
-]);
+export const insightCategoryEnum = pgEnum(
+	'insight_category',
+	INSIGHT_CATEGORIES,
+);
 
-export const batchStatusEnum = pgEnum('batch_status', [
-	'pending',
-	'processing',
-	'completed',
-	'failed',
-]);
+export const opportunityTypeEnum = pgEnum(
+	'opportunity_type',
+	OPPORTUNITY_TYPES,
+);
 
-// Config Types
-export type RedditConfig = {
-	subreddit: string;
-};
-
-export type HackerNewsConfig = {
-	includeAskHN: boolean;
-	includeShowHN: boolean;
-	includeJobs: boolean;
-};
-
-export type ProductHuntConfig = {
-	includeLaunches: boolean;
-	includeDiscussions: boolean;
-};
-
-export type SourceConfig = RedditConfig | HackerNewsConfig | ProductHuntConfig;
+export const batchStatusEnum = pgEnum('batch_status', BATCH_STATUSES);
 
 // Tables
 export const sources = pgTable('sources', {
@@ -98,14 +88,6 @@ export const scrapeResults = pgTable(
 		unique('unique_source_external').on(table.sourceId, table.externalId),
 	],
 );
-
-export const opportunityTypeEnum = pgEnum('opportunity_type', [
-	'gap',
-	'improvement',
-	'workflow',
-	'pricing',
-	'integration',
-]);
 
 export const insights = pgTable('insights', {
 	id: uuid('id').primaryKey().defaultRandom(),
