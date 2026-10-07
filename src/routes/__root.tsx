@@ -6,10 +6,9 @@ import {
 } from '@tanstack/react-router';
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools';
 import { TanStackDevtools } from '@tanstack/react-devtools';
-import { QueryClientProvider } from '@tanstack/react-query';
 import appCss from '../styles.css?url';
 import type { QueryClient } from '@tanstack/react-query';
-import { ThemeProvider } from '@/components/theme-provider';
+import { THEME_STORAGE_KEY, ThemeProvider } from '@/components/theme-provider';
 
 export interface RouterContext {
 	queryClient: QueryClient;
@@ -41,19 +40,16 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 });
 
 function RootComponent() {
-	const { queryClient } = Route.useRouteContext();
 	return (
-		<QueryClientProvider client={queryClient}>
-			<RootDocument>
-				<Outlet />
-			</RootDocument>
-		</QueryClientProvider>
+		<RootDocument>
+			<Outlet />
+		</RootDocument>
 	);
 }
 
 const themeScript = `
 (function() {
-  const storageKey = 'glimpse-theme';
+  const storageKey = '${THEME_STORAGE_KEY}';
   const stored = localStorage.getItem(storageKey);
   let theme = 'system';
   if (stored === 'dark' || stored === 'light' || stored === 'system') {
@@ -74,9 +70,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 				<HeadContent />
 			</head>
 			<body className='min-h-screen bg-background'>
-				<ThemeProvider defaultTheme='system' storageKey='glimpse-theme'>
-					{children}
-				</ThemeProvider>
+				<ThemeProvider>{children}</ThemeProvider>
 				<TanStackDevtools
 					config={{
 						position: 'bottom-right',

@@ -1,43 +1,40 @@
 import { createServerFn } from '@tanstack/react-start';
 import { and, count, desc, eq, gte, inArray, isNull } from 'drizzle-orm';
 import { z } from 'zod';
-import { db, insights, processingBatches, scrapeResults, sources } from '@/db';
+import {
+	db,
+	firstOrThrow,
+	insights,
+	processingBatches,
+	scrapeResults,
+	sources,
+} from '@/db';
 import { extractInsights } from '@/lib/ai';
 import { AI_CONFIG } from '@/lib/constants';
+import { INSIGHT_CATEGORIES, OPPORTUNITY_TYPES } from '@/lib/domain';
 import {
 	deleteLowQualityItems,
 	preFilterScrapeResults,
 } from '@/lib/pre-filter';
 
+const getInsightsSchema = z.object({
+	limit: z.number().int().min(1).max(100).default(20),
+	offset: z.number().int().min(0).default(0),
+	category: z.enum(INSIGHT_CATEGORIES).optional(),
+	opportunityType: z.enum(OPPORTUNITY_TYPES).optional(),
+	minConfidence: z.number().min(0).max(1).default(0),
+});
+
+const idSchema = z.object({ id: z.uuid() });
+
+const insightWithSource = {
+	insight: insights,
+	scrapeResult: scrapeResults,
+	source: sources,
+};
+
 export const getInsights = createServerFn({ method: 'GET' })
-	.inputValidator(
-		(data: {
-			limit?: number;
-			offset?: number;
-			category?: string;
-			opportunityType?: string;
-			minConfidence?: number;
-		}) =>
-			z
-				.object({
-					limit: z.number().min(1).max(100).default(20),
-					offset: z.number().min(0).default(0),
-					category: z
-						.enum([
-							'complaint',
-							'feature_request',
-							'pain_point',
-							'idea',
-							'other',
-						])
-						.optional(),
-					opportunityType: z
-						.enum(['gap', 'improvement', 'workflow', 'pricing', 'integration'])
-						.optional(),
-					minConfidence: z.number().min(0).max(1).default(0),
-				})
-				.parse(data),
-	)
+	.validator(getInsightsSchema)
 	.handler(async ({ data }) => {
 		const conditions = [];
 
@@ -53,41 +50,29 @@ export const getInsights = createServerFn({ method: 'GET' })
 			conditions.push(gte(insights.confidence, data.minConfidence));
 		}
 
-		const allInsights = await db
-			.select({
-				insight: insights,
-				scrapeResult: scrapeResults,
-				source: sources,
-			})
+		return db
+			.select(insightWithSource)
 			.from(insights)
 			.innerJoin(scrapeResults, eq(insights.scrapeResultId, scrapeResults.id))
 			.innerJoin(sources, eq(scrapeResults.sourceId, sources.id))
-			.where(conditions.length > 0 ? and(...conditions) : undefined)
+			.where(and(...conditions))
 			.orderBy(desc(insights.createdAt))
 			.limit(data.limit)
 			.offset(data.offset);
-
-		return allInsights;
 	});
 
 export const getInsight = createServerFn({ method: 'GET' })
-	.inputValidator((data: { id: string }) =>
-		z.object({ id: z.string().uuid() }).parse(data),
-	)
+	.validator(idSchema)
 	.handler(async ({ data }) => {
 		const [result] = await db
-			.select({
-				insight: insights,
-				scrapeResult: scrapeResults,
-				source: sources,
-			})
+			.select(insightWithSource)
 			.from(insights)
 			.innerJoin(scrapeResults, eq(insights.scrapeResultId, scrapeResults.id))
 			.innerJoin(sources, eq(scrapeResults.sourceId, sources.id))
 			.where(eq(insights.id, data.id))
 			.limit(1);
 
-		return result;
+		return result ?? null;
 	});
 
 export const processWithAI = createServerFn({ method: 'POST' }).handler(
@@ -112,7 +97,7 @@ export const processWithAI = createServerFn({ method: 'POST' }).handler(
 			};
 		}
 
-		const [batch] = await db
+		const batch = await db
 			.insert(processingBatches)
 			.values({
 				status: 'processing',
@@ -120,7 +105,8 @@ export const processWithAI = createServerFn({ method: 'POST' }).handler(
 				processedItems: 0,
 				startedAt: new Date(),
 			})
-			.returning();
+			.returning()
+			.then(firstOrThrow);
 
 		console.log(`[ai] Created batch: ${batch.id}`);
 
@@ -132,11 +118,7 @@ export const processWithAI = createServerFn({ method: 'POST' }).handler(
 				source: result.scrapeResult.sourceType,
 			}));
 
-			console.log(`[ai] Sending ${itemsForAI.length} items to Gemini...`);
-
 			const aiResults = await extractInsights(itemsForAI);
-
-			console.log(`[ai] Gemini returned ${aiResults.insights.length} insights`);
 
 			const highConfidence = aiResults.insights.filter(
 				(i) => i.confidence >= AI_CONFIG.minConfidence,
@@ -150,17 +132,9 @@ export const processWithAI = createServerFn({ method: 'POST' }).handler(
 			);
 
 			if (highConfidence.length > 0) {
-				const newInsights = highConfidence.map((aiInsight) => ({
-					scrapeResultId: aiInsight.externalId,
-					category: aiInsight.category,
-					opportunityType: aiInsight.opportunityType,
-					summary: aiInsight.summary,
-					productIdea: aiInsight.productIdea,
-					targetCustomer: aiInsight.targetCustomer,
-					competitorsMentioned: aiInsight.competitorsMentioned,
-					marketSignal: aiInsight.marketSignal,
-					confidence: aiInsight.confidence,
-					tags: aiInsight.tags,
+				const newInsights = highConfidence.map(({ externalId, ...rest }) => ({
+					scrapeResultId: externalId,
+					...rest,
 				}));
 
 				await db.insert(insights).values(newInsights);
@@ -207,29 +181,29 @@ export const processWithAI = createServerFn({ method: 'POST' }).handler(
 
 export const getInsightsCount = createServerFn({ method: 'GET' }).handler(
 	async () => {
-		const [result] = await db.select({ count: count() }).from(insights);
+		const result = await db
+			.select({ count: count() })
+			.from(insights)
+			.then(firstOrThrow);
 
 		return result.count;
 	},
 );
 
 export const deleteInsight = createServerFn({ method: 'POST' })
-	.inputValidator((data: { id: string }) =>
-		z.object({ id: z.string().uuid() }).parse(data),
-	)
+	.validator(idSchema)
 	.handler(async ({ data }) => {
-		const insightResult = await db
-			.select({ scrapeResultId: insights.scrapeResultId })
-			.from(insights)
-			.where(eq(insights.id, data.id));
-
-		await db.delete(insights).where(eq(insights.id, data.id));
-
-		if (insightResult.length > 0) {
-			await db
-				.delete(scrapeResults)
-				.where(eq(scrapeResults.id, insightResult[0].scrapeResultId));
-		}
+		await db
+			.delete(scrapeResults)
+			.where(
+				inArray(
+					scrapeResults.id,
+					db
+						.select({ id: insights.scrapeResultId })
+						.from(insights)
+						.where(eq(insights.id, data.id)),
+				),
+			);
 
 		return { success: true };
 	});
@@ -242,15 +216,16 @@ export const getProcessingStatus = createServerFn({ method: 'GET' }).handler(
 			.orderBy(desc(processingBatches.createdAt))
 			.limit(1);
 
-		const totalUnprocessed = await db
-			.select()
+		const { unprocessedCount } = await db
+			.select({ unprocessedCount: count() })
 			.from(scrapeResults)
 			.leftJoin(insights, eq(scrapeResults.id, insights.scrapeResultId))
-			.where(isNull(insights.id));
+			.where(isNull(insights.id))
+			.then(firstOrThrow);
 
 		return {
-			latestBatch,
-			unprocessedCount: totalUnprocessed.length,
+			latestBatch: latestBatch ?? null,
+			unprocessedCount,
 		};
 	},
 );

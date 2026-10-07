@@ -1,59 +1,13 @@
 import { IconLoader2 } from '@tabler/icons-react';
+import type { InsightRowData } from '@/components/insight-row';
 import InsightRow from '@/components/insight-row';
-import { Skeleton } from '@/components/ui/skeleton';
-
-interface Insight {
-	id: string;
-	category: string;
-	opportunityType: string | null;
-	summary: string;
-	productIdea: string | null;
-	targetCustomer: string | null;
-	competitorsMentioned: Array<string> | null;
-	marketSignal: number | null;
-	confidence: number;
-	tags: Array<string> | null;
-	createdAt: Date;
-}
-
-interface ScrapeResult {
-	title: string | null;
-	url: string | null;
-}
-
-interface Source {
-	type: string;
-	name: string;
-}
 
 interface InsightsTableProps {
-	insights: Array<{
-		insight: Insight;
-		scrapeResult: ScrapeResult;
-		source: Source;
-	}>;
+	insights: Array<InsightRowData>;
 	isLoading?: boolean;
 	onDelete?: (id: string) => void;
 	isDeleting?: boolean;
 }
-
-const InsightsTableSkeleton = () => (
-	<div className='space-y-2'>
-		{Array.from({ length: 5 }).map((_, i) => (
-			<div
-				key={i}
-				className='flex items-center gap-4 rounded-lg border bg-card p-4'
-			>
-				<Skeleton className='h-5 w-24' />
-				<Skeleton className='h-4 flex-1' />
-				<Skeleton className='h-4 w-10' />
-				<Skeleton className='h-4 w-20' />
-				<Skeleton className='h-4 w-16' />
-				<Skeleton className='size-4' />
-			</div>
-		))}
-	</div>
-);
 
 const InsightsTable = ({
 	insights,
@@ -85,4 +39,4 @@ const InsightsTable = ({
 	);
 };
 
-export { InsightsTable, InsightsTableSkeleton };
+export default InsightsTable;

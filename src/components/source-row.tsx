@@ -1,6 +1,10 @@
 import { IconX } from '@tabler/icons-react';
-import type { Source, SourceConfig } from '@/db';
-import type { SourceType } from '@/lib/ui-constants';
+import type {
+	HackerNewsConfig,
+	ProductHuntConfig,
+	RedditConfig,
+	Source,
+} from '@/db/schema';
 import { SOURCE_TYPE_ICONS, SOURCE_TYPE_LABELS } from '@/lib/ui-constants';
 import { Button } from '@/components/ui/button';
 import {
@@ -24,16 +28,12 @@ interface SourceRowProps {
 	isDeleting: boolean;
 }
 
-const getConfigDisplay = (type: string, config: SourceConfig): string => {
+const getConfigDisplay = ({ type, config }: Source): string => {
 	switch (type) {
 		case 'reddit':
-			return `Subreddit: r/${(config as { subreddit: string }).subreddit}`;
+			return `Subreddit: r/${(config as RedditConfig).subreddit}`;
 		case 'hackernews': {
-			const hnConfig = config as {
-				includeAskHN: boolean;
-				includeShowHN: boolean;
-				includeJobs: boolean;
-			};
+			const hnConfig = config as HackerNewsConfig;
 			const types = [];
 			if (hnConfig.includeAskHN) types.push('Ask HN');
 			if (hnConfig.includeShowHN) types.push('Show HN');
@@ -41,17 +41,12 @@ const getConfigDisplay = (type: string, config: SourceConfig): string => {
 			return types.length > 0 ? `Types: ${types.join(', ')}` : 'All types';
 		}
 		case 'producthunt': {
-			const phConfig = config as {
-				includeLaunches: boolean;
-				includeDiscussions: boolean;
-			};
+			const phConfig = config as ProductHuntConfig;
 			const types = [];
 			if (phConfig.includeLaunches) types.push('Launches');
 			if (phConfig.includeDiscussions) types.push('Discussions');
 			return types.length > 0 ? `Types: ${types.join(', ')}` : 'All types';
 		}
-		default:
-			return JSON.stringify(config);
 	}
 };
 
@@ -62,10 +57,9 @@ const SourceRow = ({
 	isToggling,
 	isDeleting,
 }: SourceRowProps) => {
-	const config = source.config;
-	const configDisplay = getConfigDisplay(source.type, config);
-	const sourceIcon = SOURCE_TYPE_ICONS[source.type as SourceType];
-	const sourceLabel = SOURCE_TYPE_LABELS[source.type as SourceType];
+	const configDisplay = getConfigDisplay(source);
+	const sourceIcon = SOURCE_TYPE_ICONS[source.type];
+	const sourceLabel = SOURCE_TYPE_LABELS[source.type];
 
 	const formattedDate = source.lastScrapedAt
 		? new Date(source.lastScrapedAt).toLocaleDateString('en-US', {

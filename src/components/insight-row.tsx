@@ -5,6 +5,7 @@ import {
 	IconExternalLink,
 	IconX,
 } from '@tabler/icons-react';
+import type { Insight, ScrapeResult, Source } from '@/db/schema';
 import { Badge } from '@/components/ui/badge';
 import {
 	Collapsible,
@@ -31,28 +32,26 @@ import {
 } from '@/lib/ui-constants';
 import { cn } from '@/lib/utils';
 
-interface InsightRowProps {
-	insight: {
-		id: string;
-		category: string;
-		opportunityType: string | null;
-		summary: string;
-		productIdea: string | null;
-		targetCustomer: string | null;
-		competitorsMentioned: Array<string> | null;
-		marketSignal: number | null;
-		confidence: number;
-		tags: Array<string> | null;
-		createdAt: Date;
-	};
-	scrapeResult: {
-		title: string | null;
-		url: string | null;
-	};
-	source: {
-		type: string;
-		name: string;
-	};
+export interface InsightRowData {
+	insight: Pick<
+		Insight,
+		| 'id'
+		| 'category'
+		| 'opportunityType'
+		| 'summary'
+		| 'productIdea'
+		| 'targetCustomer'
+		| 'competitorsMentioned'
+		| 'marketSignal'
+		| 'confidence'
+		| 'tags'
+		| 'createdAt'
+	>;
+	scrapeResult: Pick<ScrapeResult, 'title' | 'url'>;
+	source: Pick<Source, 'type' | 'name'>;
+}
+
+interface InsightRowProps extends InsightRowData {
 	onDelete?: () => void;
 	isDeleting?: boolean;
 }
@@ -66,9 +65,8 @@ const InsightRow = ({
 }: InsightRowProps) => {
 	const [isExpanded, setIsExpanded] = useState(false);
 
-	const sourceIcon =
-		SOURCE_TYPE_ICONS[source.type as keyof typeof SOURCE_TYPE_ICONS];
-	const categoryColor = CATEGORY_COLORS[insight.category] || '';
+	const sourceIcon = SOURCE_TYPE_ICONS[source.type];
+	const categoryColor = CATEGORY_COLORS[insight.category];
 	const opportunityColor =
 		insight.opportunityType && OPPORTUNITY_TYPE_COLORS[insight.opportunityType];
 	const opportunityLabel =

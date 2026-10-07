@@ -1,196 +1,172 @@
 import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
 import { eq } from 'drizzle-orm';
-import type { HackerNewsConfig, NewScrapeResult, RedditConfig } from '@/db';
+import type {
+	HackerNewsConfig,
+	NewScrapeResult,
+	RedditConfig,
+	Source,
+} from '@/db';
 import { db, scrapeResults, sources } from '@/db';
-import {
-	scrapeHackerNews,
-	setHackerNewsAborted,
-} from '@/lib/scrapers/hackernews';
+import { scrapeHackerNews } from '@/lib/scrapers/hackernews';
 import { scrapeProductHunt } from '@/lib/scrapers/producthunt';
 import { scrapeSubreddit } from '@/lib/scrapers/reddit';
 
-let isScrapingActive = false;
-let shouldAbort = false;
+type ScrapeSourceResult = {
+	sourceId: string;
+	sourceName: string;
+	itemsFound: number;
+	success: boolean;
+	error?: string;
+};
 
-export const getScrapeStatus = createServerFn({ method: 'GET' }).handler(() => {
+let activeScrape: AbortController | null = null;
+
+function runScraper(
+	source: Source,
+	signal?: AbortSignal,
+): Promise<Array<NewScrapeResult>> {
+	switch (source.type) {
+		case 'reddit':
+			return scrapeSubreddit(
+				source.id,
+				(source.config as RedditConfig).subreddit,
+				signal,
+			);
+		case 'hackernews':
+			return scrapeHackerNews(
+				source.id,
+				source.config as HackerNewsConfig,
+				signal,
+			);
+		case 'producthunt':
+			return scrapeProductHunt(source.id);
+	}
+}
+
+async function saveResults(
+	source: Source,
+	items: Array<NewScrapeResult>,
+): Promise<void> {
+	if (items.length > 0) {
+		const inserted = await db
+			.insert(scrapeResults)
+			.values(items)
+			.onConflictDoNothing({
+				target: [scrapeResults.sourceId, scrapeResults.externalId],
+			})
+			.returning({ id: scrapeResults.id });
+		console.log(
+			`[scrape] Inserted ${inserted.length}/${items.length} items for ${source.name}`,
+		);
+	}
+
+	await db
+		.update(sources)
+		.set({ lastScrapedAt: new Date(), updatedAt: new Date() })
+		.where(eq(sources.id, source.id));
+}
+
+function abortedResult(source: Source): ScrapeSourceResult {
 	return {
-		isActive: isScrapingActive,
+		sourceId: source.id,
+		sourceName: source.name,
+		itemsFound: 0,
+		success: false,
+		error: 'Aborted by user',
 	};
-});
+}
+
+export const getScrapeStatus = createServerFn({ method: 'GET' }).handler(
+	() => ({ isActive: activeScrape !== null }),
+);
 
 export const stopScraping = createServerFn({ method: 'POST' }).handler(() => {
 	console.log('[scrape] Stop requested');
-	shouldAbort = true;
-	setHackerNewsAborted(true);
+	activeScrape?.abort();
 	return { stopped: true };
 });
 
 export const scrapeSource = createServerFn({ method: 'POST' })
-	.inputValidator((data: { sourceId: string }) =>
-		z.object({ sourceId: z.string().uuid() }).parse(data),
-	)
+	.validator(z.object({ sourceId: z.uuid() }))
 	.handler(async ({ data }) => {
-		const sourceResult = await db
+		const [source] = await db
 			.select()
 			.from(sources)
 			.where(eq(sources.id, data.sourceId))
 			.limit(1);
 
-		const source = sourceResult.at(0);
 		if (!source) {
 			throw new Error('Source not found');
 		}
 
-		let results: Array<NewScrapeResult> = [];
-
-		switch (source.type) {
-			case 'reddit': {
-				const config = source.config as RedditConfig;
-				results = await scrapeSubreddit(source.id, config.subreddit);
-				break;
-			}
-			case 'hackernews': {
-				const config = source.config as HackerNewsConfig;
-				results = await scrapeHackerNews(source.id, config);
-				break;
-			}
-			case 'producthunt': {
-				results = await scrapeProductHunt(source.id);
-				break;
-			}
-		}
-
-		if (results.length > 0) {
-			await db
-				.insert(scrapeResults)
-				.values(results)
-				.onConflictDoNothing({
-					target: [scrapeResults.sourceId, scrapeResults.externalId],
-				});
-		}
-
-		await db
-			.update(sources)
-			.set({ lastScrapedAt: new Date(), updatedAt: new Date() })
-			.where(eq(sources.id, source.id));
+		const items = await runScraper(source);
+		await saveResults(source, items);
 
 		return {
 			sourceId: source.id,
 			sourceName: source.name,
-			itemsFound: results.length,
+			itemsFound: items.length,
 		};
 	});
 
 export const scrapeAllSources = createServerFn({ method: 'POST' }).handler(
 	async () => {
-		shouldAbort = false;
-		setHackerNewsAborted(false);
-		isScrapingActive = true;
+		const controller = new AbortController();
+		const { signal } = controller;
+		const isAborted = () => signal.aborted;
+		activeScrape = controller;
 
 		console.log('[scrape] Starting scrape of all sources');
 
-		const enabledSources = await db
-			.select()
-			.from(sources)
-			.where(eq(sources.enabled, true));
+		try {
+			const enabledSources = await db
+				.select()
+				.from(sources)
+				.where(eq(sources.enabled, true));
 
-		const results = [];
+			const results: Array<ScrapeSourceResult> = [];
 
-		for (const source of enabledSources) {
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- shouldAbort is mutated externally by stopScraping
-			if (shouldAbort) {
-				console.log('[scrape] Aborted by user');
-				results.push({
-					sourceId: source.id,
-					sourceName: source.name,
-					itemsFound: 0,
-					success: false,
-					error: 'Aborted by user',
-				});
-				continue;
-			}
-
-			try {
-				let scrapedItems: Array<NewScrapeResult> = [];
-
-				switch (source.type) {
-					case 'reddit': {
-						const config = source.config as RedditConfig;
-						scrapedItems = await scrapeSubreddit(source.id, config.subreddit);
-						break;
-					}
-					case 'hackernews': {
-						const config = source.config as HackerNewsConfig;
-						scrapedItems = await scrapeHackerNews(source.id, config);
-						break;
-					}
-					case 'producthunt': {
-						scrapedItems = await scrapeProductHunt(source.id);
-						break;
-					}
+			for (const source of enabledSources) {
+				if (isAborted()) {
+					results.push(abortedResult(source));
+					continue;
 				}
 
-				// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- shouldAbort is mutated externally by stopScraping
-				if (shouldAbort) {
-					console.log('[scrape] Aborted after scraping, not saving results');
+				try {
+					const items = await runScraper(source, signal);
+					signal.throwIfAborted();
+
+					await saveResults(source, items);
+					results.push({
+						sourceId: source.id,
+						sourceName: source.name,
+						itemsFound: items.length,
+						success: true,
+					});
+				} catch (error) {
+					if (isAborted()) {
+						console.log('[scrape] Aborted, discarding results');
+						results.push(abortedResult(source));
+						continue;
+					}
+					console.error(`[scrape] Failed to scrape ${source.name}:`, error);
 					results.push({
 						sourceId: source.id,
 						sourceName: source.name,
 						itemsFound: 0,
 						success: false,
-						error: 'Aborted by user',
+						error: error instanceof Error ? error.message : 'Unknown error',
 					});
-					continue;
 				}
+			}
 
-				if (scrapedItems.length > 0) {
-					console.log(
-						`[scrape] Inserting ${scrapedItems.length} items for source ${source.name}`,
-					);
-					try {
-						const inserted = await db
-							.insert(scrapeResults)
-							.values(scrapedItems)
-							.onConflictDoNothing({
-								target: [scrapeResults.sourceId, scrapeResults.externalId],
-							})
-							.returning({ id: scrapeResults.id });
-						console.log(
-							`[scrape] Successfully inserted ${inserted.length} items`,
-						);
-					} catch (error) {
-						console.error('[scrape] Error inserting scrape results:', error);
-						throw error;
-					}
-				} else {
-					console.log(`[scrape] No items to insert for source ${source.name}`);
-				}
-
-				await db
-					.update(sources)
-					.set({ lastScrapedAt: new Date(), updatedAt: new Date() })
-					.where(eq(sources.id, source.id));
-
-				results.push({
-					sourceId: source.id,
-					sourceName: source.name,
-					itemsFound: scrapedItems.length,
-					success: true,
-				});
-			} catch (error) {
-				results.push({
-					sourceId: source.id,
-					sourceName: source.name,
-					itemsFound: 0,
-					success: false,
-					error: error instanceof Error ? error.message : 'Unknown error',
-				});
+			console.log('[scrape] Scraping completed');
+			return results;
+		} finally {
+			if (activeScrape === controller) {
+				activeScrape = null;
 			}
 		}
-
-		isScrapingActive = false;
-		console.log('[scrape] Scraping completed');
-		return results;
 	},
 );

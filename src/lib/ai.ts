@@ -1,23 +1,19 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import { Output, generateText } from 'ai';
 import { z } from 'zod';
+import { INSIGHT_CATEGORIES, OPPORTUNITY_TYPES } from './domain';
+import type { InsightCategory } from './domain';
 
 const openai = createOpenAI({
 	apiKey: process.env.OPENAI_API_KEY,
 });
 
-export const model = openai(process.env.OPENAI_MODEL ?? 'gpt-4.1-mini');
+const model = openai(process.env.OPENAI_MODEL ?? 'gpt-6-luna');
 
-export const insightSchema = z.object({
-	category: z.enum([
-		'complaint',
-		'feature_request',
-		'pain_point',
-		'idea',
-		'other',
-	]),
+const insightSchema = z.object({
+	category: z.enum(INSIGHT_CATEGORIES),
 	opportunityType: z
-		.enum(['gap', 'improvement', 'workflow', 'pricing', 'integration'])
+		.enum(OPPORTUNITY_TYPES)
 		.describe(
 			'gap=no good solution exists, improvement=enhance existing, workflow=manual process to automate, pricing=too expensive, integration=needs to connect tools',
 		),
@@ -46,9 +42,7 @@ export const insightSchema = z.object({
 	tags: z.array(z.string()).describe('Keywords for categorization'),
 });
 
-export type InsightExtraction = z.infer<typeof insightSchema>;
-
-export const batchInsightSchema = z.object({
+const batchInsightSchema = z.object({
 	insights: z.array(
 		z.object({
 			externalId: z.string().describe('The ID of the original content'),
@@ -59,7 +53,7 @@ export const batchInsightSchema = z.object({
 
 export type BatchInsightExtraction = z.infer<typeof batchInsightSchema>;
 
-export const INSIGHT_EXTRACTION_PROMPT = `You are a product researcher identifying startup opportunities from user feedback.
+const INSIGHT_EXTRACTION_PROMPT = `You are a product researcher identifying startup opportunities from user feedback.
 
 For each piece of content, analyze:
 
@@ -124,31 +118,30 @@ Content: ${item.content || 'N/A'}
 	const result = await generateText({
 		model,
 		output: Output.object({ schema: batchInsightSchema }),
-		prompt: `${INSIGHT_EXTRACTION_PROMPT}
-
-Analyze this content:
+		instructions: INSIGHT_EXTRACTION_PROMPT,
+		prompt: `Analyze this content:
 
 ${formattedContent}
 
 Return insights for each, using externalId to reference the original.`,
 	});
 
-	const elapsed = Date.now() - startTime;
-	console.log(`[ai] Completed in ${elapsed}ms`);
-
-	const categories = result.output.insights.reduce(
-		(acc, insight) => {
-			acc[insight.category] = (acc[insight.category] || 0) + 1;
-			return acc;
-		},
-		{} as Record<string, number>,
+	const { insights } = result.output;
+	console.log(
+		`[ai] Completed in ${Date.now() - startTime}ms with ${insights.length} insights`,
 	);
-	console.log('[ai] Categories:', categories);
 
-	const avgMarketSignal =
-		result.output.insights.reduce((sum, i) => sum + i.marketSignal, 0) /
-		result.output.insights.length;
-	console.log(`[ai] Avg market signal: ${avgMarketSignal.toFixed(2)}`);
+	if (insights.length > 0) {
+		const categories: Partial<Record<InsightCategory, number>> = {};
+		for (const { category } of insights) {
+			categories[category] = (categories[category] ?? 0) + 1;
+		}
+		console.log('[ai] Categories:', categories);
+
+		const avgMarketSignal =
+			insights.reduce((sum, i) => sum + i.marketSignal, 0) / insights.length;
+		console.log(`[ai] Avg market signal: ${avgMarketSignal.toFixed(2)}`);
+	}
 
 	return result.output;
 }

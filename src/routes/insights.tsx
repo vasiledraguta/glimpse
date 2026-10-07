@@ -1,74 +1,54 @@
-import {
-	Link,
-	createFileRoute,
-	useNavigate,
-	useSearch,
-} from '@tanstack/react-router';
+import { Link, createFileRoute } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { IconBrain } from '@tabler/icons-react';
+import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import TabNavigation from '@/components/tab-navigation';
-import { InsightsTable } from '@/components/insights-table';
+import InsightsTable from '@/components/insights-table';
 import InsightsFilters from '@/components/insights-filters';
+import { INSIGHT_CATEGORIES, OPPORTUNITY_TYPES } from '@/lib/domain';
 import { CATEGORY_LABELS } from '@/lib/ui-constants';
 import { deleteInsight, getInsights } from '@/server/insights';
 
 const ITEMS_PER_PAGE = 20;
 
-type SearchParams = {
-	page?: number;
-	category?: 'complaint' | 'feature_request' | 'pain_point' | 'idea' | 'other';
-	opportunityType?:
-		| 'gap'
-		| 'improvement'
-		| 'workflow'
-		| 'pricing'
-		| 'integration';
-	minConfidence?: number;
-};
+const searchSchema = z.object({
+	page: z.number().int().min(1).optional().catch(undefined),
+	category: z.enum(INSIGHT_CATEGORIES).optional().catch(undefined),
+	opportunityType: z.enum(OPPORTUNITY_TYPES).optional().catch(undefined),
+	minConfidence: z.number().min(0).max(100).optional().catch(undefined),
+});
+
+type SearchParams = z.infer<typeof searchSchema>;
 
 export const Route = createFileRoute('/insights')({
 	component: InsightsPage,
-	validateSearch: (search: Record<string, unknown>): SearchParams => ({
-		page: Number(search.page) || 1,
-		category: search.category as SearchParams['category'],
-		opportunityType: search.opportunityType as SearchParams['opportunityType'],
-		minConfidence: Number(search.minConfidence) || 0,
-	}),
+	validateSearch: searchSchema,
 });
 
 function InsightsPage() {
 	const queryClient = useQueryClient();
-	const navigate = useNavigate();
-	const { page, category, opportunityType, minConfidence } = useSearch({
-		from: '/insights',
-	});
-	const currentPage = page || 1;
-	const currentConfidence = minConfidence || 0;
+	const navigate = Route.useNavigate();
+	const {
+		page: currentPage = 1,
+		category,
+		opportunityType,
+		minConfidence: currentConfidence = 0,
+	} = Route.useSearch();
 	const offset = (currentPage - 1) * ITEMS_PER_PAGE;
 
+	const filters = {
+		limit: ITEMS_PER_PAGE,
+		offset,
+		category,
+		opportunityType,
+		minConfidence: currentConfidence / 100,
+	};
+
 	const { data: insights = [], isLoading } = useQuery({
-		queryKey: [
-			'insights',
-			{
-				limit: ITEMS_PER_PAGE,
-				offset,
-				category,
-				opportunityType,
-				minConfidence: currentConfidence / 100,
-			},
-		],
-		queryFn: () =>
-			getInsights({
-				data: {
-					limit: ITEMS_PER_PAGE,
-					offset,
-					category,
-					opportunityType,
-					minConfidence: currentConfidence / 100,
-				},
-			}),
+		queryKey: ['insights', filters],
+		queryFn: () => getInsights({ data: filters }),
 	});
 
 	const deleteMutation = useMutation({
@@ -82,36 +62,14 @@ function InsightsPage() {
 	const hasNextPage = insights.length === ITEMS_PER_PAGE;
 	const hasPrevPage = currentPage > 1;
 
-	const updateFilters = (updates: Partial<SearchParams>) => {
+	const updateFilters = (updates: SearchParams) => {
 		navigate({
-			to: '/insights',
-			search: {
-				page:
-					updates.page !== undefined
-						? updates.page
-						: updates.category !== undefined ||
-							  updates.opportunityType !== undefined ||
-							  updates.minConfidence !== undefined
-							? 1
-							: currentPage,
-				category: updates.category !== undefined ? updates.category : category,
-				opportunityType:
-					updates.opportunityType !== undefined
-						? updates.opportunityType
-						: opportunityType,
-				minConfidence:
-					updates.minConfidence !== undefined
-						? updates.minConfidence
-						: currentConfidence,
-			},
+			search: (prev) => ({ ...prev, ...updates, page: updates.page ?? 1 }),
 		});
 	};
 
 	const clearFilters = () => {
-		navigate({
-			to: '/insights',
-			search: { page: 1 },
-		});
+		navigate({ search: {} });
 	};
 
 	const hasActiveFilters = category || opportunityType || currentConfidence > 0;
@@ -132,13 +90,9 @@ function InsightsPage() {
 					category={category}
 					opportunityType={opportunityType}
 					minConfidence={currentConfidence}
-					onCategoryChange={(value) =>
-						updateFilters({ category: value as SearchParams['category'] })
-					}
+					onCategoryChange={(value) => updateFilters({ category: value })}
 					onOpportunityTypeChange={(value) =>
-						updateFilters({
-							opportunityType: value as SearchParams['opportunityType'],
-						})
+						updateFilters({ opportunityType: value })
 					}
 					onConfidenceChange={(value) =>
 						updateFilters({ minConfidence: value })

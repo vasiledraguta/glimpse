@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useState } from 'react';
 
 type Theme = 'dark' | 'light' | 'system';
 
+export const THEME_STORAGE_KEY = 'glimpse-theme';
+
 type ThemeProviderProps = {
 	children: React.ReactNode;
 	defaultTheme?: Theme;
@@ -20,7 +22,7 @@ const ThemeProviderContext = createContext<ThemeProviderState | undefined>(
 export const ThemeProvider = ({
 	children,
 	defaultTheme = 'system',
-	storageKey = 'glimpse-theme',
+	storageKey = THEME_STORAGE_KEY,
 }: ThemeProviderProps) => {
 	const [theme, setThemeState] = useState<Theme>(defaultTheme);
 
