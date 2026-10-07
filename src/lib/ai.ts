@@ -8,7 +8,7 @@ const openai = createOpenAI({
 	apiKey: process.env.OPENAI_API_KEY,
 });
 
-const model = openai(process.env.OPENAI_MODEL ?? 'gpt-4.1-mini');
+const model = openai(process.env.OPENAI_MODEL ?? 'gpt-6-luna');
 
 const insightSchema = z.object({
 	category: z.enum(INSIGHT_CATEGORIES),

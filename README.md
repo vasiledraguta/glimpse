@@ -21,7 +21,7 @@ bun run dev
 | ------------------------ | -------------------------------------------------- |
 | `DATABASE_URL`           | PostgreSQL (Neon) connection string                |
 | `OPENAI_API_KEY`         | OpenAI API key                                     |
-| `OPENAI_MODEL`           | Optional model override (default `gpt-4.1-mini`)   |
+| `OPENAI_MODEL`           | Optional model override (default `gpt-6-luna`)     |
 | `PRODUCTHUNT_API_KEY`    | Product Hunt API key                               |
 | `PRODUCTHUNT_API_SECRET` | Product Hunt API secret                            |
 
